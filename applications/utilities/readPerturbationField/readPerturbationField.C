@@ -32,9 +32,8 @@ Description
 #include <fstream>
 #include <vector>
 
-#include "argList.H"
+#include "fvCFD.H"
 #include "vectorList.H"
-#include "pointField.H"
 
 #ifndef namespaceFoam
 #define namespaceFoam
@@ -187,7 +186,14 @@ void read_bts(word fname)
         {
             //y = -0.5*(NY-1)*dy + j*dy; // original TurbSim plane
             y[j] = j*dy;
-            Info<< " " << y[j];
+            if((j < 3) || (j >= NY-2))
+            {
+                Info<< " " << y[j];
+            }
+            else if(j==3)
+            {
+                Info << " ...";
+            }
         }
         Info<< " ]" << endl;
 
@@ -196,17 +202,31 @@ void read_bts(word fname)
         {
             //z[k] = k*dz + zbot; // original TurbSim plane
             z[k] = k*dz;
-            Info<< " " << z[k];
+            if((k < 3) || (k >= NZ-2))
+            {
+                Info<< " " << z[k];
+            }
+            else if(k==3)
+            {
+                Info << " ...";
+            }
         }
         Info<< " ]" << endl;
 
-        //Info<< "t : [";
+        Info<< "t : [";
         for(int i=0; i<N; ++i)
         {
             t[i] = i*dt;
-            //Info<< " " << t[i];
+            if((i < 3) || (i >= N-2))
+            {
+                Info<< " " << t[i];
+            }
+            else if(i==3)
+            {
+                Info << " ...";
+            }
         }
-        //Info<< " ]" << endl;
+        Info<< " ]" << endl;
 
         i = 0;
         for(int k=0; k<= NZ; ++k)
@@ -231,22 +251,29 @@ void read_bts(word fname)
 
 int main(int argc, char *argv[])
 {
-    //#include "addDictOption.H"
-    argList::validArgs.append("btsfile");
-    Foam::argList args(argc, argv);
-    if (argc < 2)
+#   include "setRootCase.H"
+#   include "createTime.H"
+
+    IOdictionary pertDict
+    (
+        IOobject
+        (
+            "perturbationProperties",
+            runTime.time().constant(),
+            runTime,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        )
+    );
+
+    word pertType(pertDict.lookupOrDefault<word>("syntheticTurbulenceType", "turbsim"));
+
+    if(pertType == "turbsim")
     {
-        FatalError
-            << "No perturbation field specified" << nl
-            << exit(FatalError);
+        word pertFieldName(pertDict.lookup("turbsimField"));
+        fileName fpath = runTime.time().constant() / "boundaryData" / pertFieldName+".bts";
+        read_bts(fpath);
     }
-
-    //const word dictName("perturbationDict");
-    //#include "setSystemMeshDictionaryIO.H"
-    //IOdictionary dict(dictIO);
-
-    const word fname = argv[1];
-    read_bts(fname);
 
     Info<< "\nEnd\n" << endl;
 
