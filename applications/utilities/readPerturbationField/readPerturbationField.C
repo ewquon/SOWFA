@@ -107,11 +107,11 @@ void read_bts(word fname)
         bts.read(reinterpret_cast<char*>(&nchar), sizeof(nchar));
         char infostr[nchar];
         bts.read(infostr, nchar);
-        Info<< "INFO: " << infostr << endl;
+        Info<< infostr << endl;
 
         // read normalized data and dimensionalize it
         std::vector<short> ivals(3*NY*NZ*N);
-        std::vector<short> ivals_tow(3*Ntower*N);
+//        std::vector<short> ivals_tow(3*Ntower*N);
 
         //std::vector<float> U(3*NY*NZ*N);
         std::vector<float> U(NY*NZ*N);
@@ -125,8 +125,6 @@ void read_bts(word fname)
 
         Info<< "Dimensionalizing grid data...";
         int i=0, n=0;
-        float umin =  9e9, vmin= 9e9, wmin= 9e9;
-        float umax = -9e9, vmax=-9e9, wmax=-9e9;
         for(int itime=0; itime<N; ++itime)
         {
             for(int k=0; k<NZ; ++k)
@@ -134,23 +132,57 @@ void read_bts(word fname)
                 for(int j=0; j<NY; ++j)
                 {
                     U[n] = (ivals[i] - Vintercept[0]) / Vslope[0] - uhub;
-                    if(U[n] < umin) umin = U[n];
-                    if(U[n] > umax) umax = U[n];
                     V[n] = (ivals[i+1] - Vintercept[1]) / Vslope[1];
-                    if(V[n] < vmin) vmin = V[n];
-                    if(V[n] > vmax) vmax = V[n];
                     W[n] = (ivals[i+2] - Vintercept[2]) / Vslope[2];
-                    if(W[n] < wmin) wmin = W[n];
-                    if(W[n] > wmax) wmax = W[n];
                     i+=3;
                     ++n;
                 }
             }
         }
         Info<< " done!" << endl;
-        Info<< "U min,max = " << umin << " " << umax << endl;
-        Info<< "V min,max = " << vmin << " " << vmax << endl;
-        Info<< "W min,max = " << wmin << " " << wmax << endl;
+
+        // calculate statistics
+        Info<< "Calculating statistics...";
+        float ustd =    0, vstd =    0, wstd =    0;
+        float umin =  9e9, vmin =  9e9, wmin =  9e9;
+        float umax = -9e9, vmax = -9e9, wmax = -9e9;
+        n = 0;
+        for(int k=0; k<NZ; ++k)
+        {
+            for(int j=0; j<NY; ++j)
+            {
+                float uu_sum=0, vv_sum=0, ww_sum=0;
+                for(int i=0; i<N; ++i)
+                {
+                    // note: U,V,W are fluctuating quantities
+                    if(U[n] < umin) umin = U[n];
+                    if(U[n] > umax) umax = U[n];
+                    if(V[n] < vmin) vmin = V[n];
+                    if(V[n] > vmax) vmax = V[n];
+                    if(W[n] < wmin) wmin = W[n];
+                    if(W[n] > wmax) wmax = W[n];
+                    uu_sum += U[n]*U[n];
+                    vv_sum += V[n]*V[n];
+                    ww_sum += W[n]*W[n];
+                    ++n;
+                }
+                //Info<< "  " << uu_sum << " " << Foam::sqrt(uu_sum/N) << endl;
+                ustd += Foam::sqrt(uu_sum/N);
+                vstd += Foam::sqrt(vv_sum/N);
+                wstd += Foam::sqrt(ww_sum/N);
+            }
+        }
+        ustd = ustd / (NY*NZ);
+        vstd = vstd / (NY*NZ);
+        wstd = wstd / (NY*NZ);
+        Info<< " done!" << endl;
+
+        Info<< "U min,max,stdev = "
+            << umin << " " << umax << " " << ustd << endl;
+        Info<< "V min,max,stdev = "
+            << vmin << " " << vmax << " " << vstd << endl;
+        Info<< "W min,max,stdev = "
+            << wmin << " " << wmax << " " << wstd << endl;
 
 //        if(Ntower > 0)
 //        {
@@ -181,7 +213,7 @@ void read_bts(word fname)
         vectorList points(NY*NZ);
         float t[N];
 
-        Info<< "y : [";
+        Info<< "y: " << NY << " [";
         for(int j=0; j<NY; ++j)
         {
             //y = -0.5*(NY-1)*dy + j*dy; // original TurbSim plane
@@ -197,7 +229,7 @@ void read_bts(word fname)
         }
         Info<< " ]" << endl;
 
-        Info<< "z : [";
+        Info<< "z: " << NZ << " [";
         for(int k=0; k<NZ; ++k)
         {
             //z[k] = k*dz + zbot; // original TurbSim plane
@@ -213,7 +245,7 @@ void read_bts(word fname)
         }
         Info<< " ]" << endl;
 
-        Info<< "t : [";
+        Info<< "t: " << N << " [";
         for(int i=0; i<N; ++i)
         {
             t[i] = i*dt;
