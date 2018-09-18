@@ -42,12 +42,19 @@ Description
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// Read a TurbSim binary full-field time series (.bts) file and map the
+// fluctuating velocity field to a specified boundary patch
 void read_bts(word fname)
+//void read_bts(word fname, const fvPatch &patch)
 {
     std::ifstream bts(fname.c_str(), std::ios::binary);
     if(bts)
     {
-        Info<< "Reading " << fname << endl;
+        bts.seekg(0, std::ios_base::end);
+        Info<< "Reading " << fname
+            << " (" << bts.tellg() << " bytes)"
+            << endl;
+        bts.seekg(0, std::ios_base::beg);
 
         short id;
 
@@ -112,79 +119,38 @@ void read_bts(word fname)
         // read normalized data and dimensionalize it
         std::vector<short> ivals(3*NY*NZ*N);
 //        std::vector<short> ivals_tow(3*Ntower*N);
-
-        //std::vector<float> U(3*NY*NZ*N);
+//        std::vector<float> U(3*NY*NZ*N);
+//        std::vector<float> Utower(3*Ntower*N);
         std::vector<float> U(NY*NZ*N);
         std::vector<float> V(NY*NZ*N);
         std::vector<float> W(NY*NZ*N);
-//        std::vector<float> Utower(3*Ntower*N);
 
-        Info<< "Reading normalized grid data...";
+        Info<< "Reading normalized velocity data...";
+        Foam::flush(Info);
         bts.read(reinterpret_cast<char*>(ivals.data()), ivals.size()*sizeof(short));
         Info<< " done!" << endl;
 
-        Info<< "Dimensionalizing grid data...";
-        int i=0, n=0;
+        int n=0;
+
+        Info<< "Dimensionalizing velocity data...";
+        int m = 0;
         for(int itime=0; itime<N; ++itime)
         {
             for(int k=0; k<NZ; ++k)
             {
                 for(int j=0; j<NY; ++j)
                 {
-                    U[n] = (ivals[i] - Vintercept[0]) / Vslope[0] - uhub;
-                    V[n] = (ivals[i+1] - Vintercept[1]) / Vslope[1];
-                    W[n] = (ivals[i+2] - Vintercept[2]) / Vslope[2];
-                    i+=3;
+                    U[n] = (ivals[m] - Vintercept[0]) / Vslope[0] - uhub;
+                    V[n] = (ivals[m+1] - Vintercept[1]) / Vslope[1];
+                    W[n] = (ivals[m+2] - Vintercept[2]) / Vslope[2];
+                    m += 3;
                     ++n;
                 }
             }
         }
         Info<< " done!" << endl;
 
-        // calculate statistics
-        Info<< "Calculating statistics...";
-        float ustd =    0, vstd =    0, wstd =    0;
-        float umin =  9e9, vmin =  9e9, wmin =  9e9;
-        float umax = -9e9, vmax = -9e9, wmax = -9e9;
-        n = 0;
-        for(int k=0; k<NZ; ++k)
-        {
-            for(int j=0; j<NY; ++j)
-            {
-                float uu_sum=0, vv_sum=0, ww_sum=0;
-                for(int i=0; i<N; ++i)
-                {
-                    // note: U,V,W are fluctuating quantities
-                    if(U[n] < umin) umin = U[n];
-                    if(U[n] > umax) umax = U[n];
-                    if(V[n] < vmin) vmin = V[n];
-                    if(V[n] > vmax) vmax = V[n];
-                    if(W[n] < wmin) wmin = W[n];
-                    if(W[n] > wmax) wmax = W[n];
-                    uu_sum += U[n]*U[n];
-                    vv_sum += V[n]*V[n];
-                    ww_sum += W[n]*W[n];
-                    ++n;
-                }
-                //Info<< "  " << uu_sum << " " << Foam::sqrt(uu_sum/N) << endl;
-                ustd += Foam::sqrt(uu_sum/N);
-                vstd += Foam::sqrt(vv_sum/N);
-                wstd += Foam::sqrt(ww_sum/N);
-            }
-        }
-        ustd = ustd / (NY*NZ);
-        vstd = vstd / (NY*NZ);
-        wstd = wstd / (NY*NZ);
-        Info<< " done!" << endl;
-
-        Info<< "U min,max,stdev = "
-            << umin << " " << umax << " " << ustd << endl;
-        Info<< "V min,max,stdev = "
-            << vmin << " " << vmax << " " << vstd << endl;
-        Info<< "W min,max,stdev = "
-            << wmin << " " << wmax << " " << wstd << endl;
-
-//        if(Ntower > 0)
+//        if(Ntower > 0)/*{{{*/
 //        {
 //            Info<< "Reading normalized tower data...";
 //            bts.read(reinterpret_cast<char*>(ivals_tow.data()), ivals_tow.size()*sizeof(short));
@@ -206,9 +172,9 @@ void read_bts(word fname)
 //                }
 //            }
 //            Info<< " done!" << endl;
-//        }
+//        }/*}}}*/
 
-        // calculate coordinates
+        // calculate coordinates/*{{{*/
         float y[NY], z[NZ];
         vectorList points(NY*NZ);
         float t[N];
@@ -218,6 +184,7 @@ void read_bts(word fname)
         {
             //y = -0.5*(NY-1)*dy + j*dy; // original TurbSim plane
             y[j] = j*dy;
+
             if((j < 3) || (j >= NY-2))
             {
                 Info<< " " << y[j];
@@ -234,6 +201,7 @@ void read_bts(word fname)
         {
             //z[k] = k*dz + zbot; // original TurbSim plane
             z[k] = k*dz;
+
             if((k < 3) || (k >= NZ-2))
             {
                 Info<< " " << z[k];
@@ -249,6 +217,7 @@ void read_bts(word fname)
         for(int i=0; i<N; ++i)
         {
             t[i] = i*dt;
+
             if((i < 3) || (i >= N-2))
             {
                 Info<< " " << t[i];
@@ -260,18 +229,87 @@ void read_bts(word fname)
         }
         Info<< " ]" << endl;
 
-        i = 0;
-        for(int k=0; k<= NZ; ++k)
+        n = 0;
+        for(int j=0; j<NY; ++j)
         {
-            for(int j=0; j<=NY; ++j)
+            for(int k=0; k<NZ; ++k)
             {
-                points[i] = vector(0.0, y[j], z[k]);
-                ++i;
+                points[n] = vector(0.0, y[j]+dy/2, z[k]+dz/2);
+                ++n;
             }
         }
-        //Info<< points << endl;
 
-        pointField samplePoints(points);
+        // DEBUG
+        //forAll(patch.Cf(), faceI)
+        //{
+        //    Info<< patch.Cf()[faceI] << endl;
+        //}/*}}}*/
+
+        // create list of vector fields (one list item per time)
+        // reorder the list to be consistent with column-major ordering
+        List<List<vector> > perturb;
+        perturb = List<List<vector> >(N, List<vector>(NY*NZ, vector::zero));
+        Info<< "Reordering data...";
+        Foam::flush(Info);
+        label lin_idx;
+        label tidx_offset(0);
+        for(int itime=0; itime<N; ++itime)
+        {
+            n = 0;
+            for(int j=0; j<NY; ++j)
+            {
+                for(int k=0; k<NZ; ++k)
+                {
+                    // do this the naive way to make sure we're getting the indexing right...
+                    lin_idx = j + k*NY + tidx_offset;
+                    perturb[itime][n] = vector(U[lin_idx], V[lin_idx], W[lin_idx]);
+                    ++n;
+                }
+            }
+            tidx_offset += NY*NZ;
+        }
+        Info<< " done." << endl;
+
+        // calculate statistics
+        Info<< "Calculating statistics...";
+        Foam::flush(Info);
+        float ustd =    0, vstd =    0, wstd =    0;
+        float umin =  9e9, vmin =  9e9, wmin =  9e9;
+        float umax = -9e9, vmax = -9e9, wmax = -9e9;
+        vector Uvec;
+        forAll(perturb[0],faceI)
+        {
+            float uu_sum=0, vv_sum=0, ww_sum=0;
+            for(int itime=0; itime<N; ++itime)
+            {
+                Uvec = perturb[itime][faceI];
+                // note: U,V,W are fluctuations
+                if(Uvec.x() < umin) umin = Uvec.x();
+                if(Uvec.x() > umax) umax = Uvec.x();
+                if(Uvec.y() < vmin) vmin = Uvec.y();
+                if(Uvec.y() > vmax) vmax = Uvec.y();
+                if(Uvec.z() < wmin) wmin = Uvec.z();
+                if(Uvec.z() > wmax) wmax = Uvec.z();
+                uu_sum += Uvec.x() * Uvec.x();
+                vv_sum += Uvec.y() * Uvec.y();
+                ww_sum += Uvec.z() * Uvec.z();
+            }
+            ustd += Foam::sqrt(uu_sum/N);
+            vstd += Foam::sqrt(vv_sum/N);
+            wstd += Foam::sqrt(ww_sum/N);
+        }
+        ustd = ustd / (NY*NZ);
+        vstd = vstd / (NY*NZ);
+        wstd = wstd / (NY*NZ);
+        Info<< " done!" << endl;
+
+        Info<< "U min,max,stdev = "
+            << umin << " " << umax << " " << ustd << endl;
+        Info<< "V min,max,stdev = "
+            << vmin << " " << vmax << " " << vstd << endl;
+        Info<< "W min,max,stdev = "
+            << wmin << " " << wmax << " " << wstd << endl;
+
     }
     else
     {
@@ -285,6 +323,10 @@ int main(int argc, char *argv[])
 {
 #   include "setRootCase.H"
 #   include "createTime.H"
+    // Note: Creating the mesh object results in probably the same segfault as
+    //       setFieldsABL, i.e., with a double free or corruption error
+    //       terminated by signal 6... Another problem for another day.
+//#   include "createNamedMesh.H"
 
     IOdictionary pertDict
     (
@@ -299,12 +341,29 @@ int main(int argc, char *argv[])
     );
 
     word pertType(pertDict.lookupOrDefault<word>("syntheticTurbulenceType", "turbsim"));
+    List<word> pertPatches(pertDict.lookup("perturbedPatches"));
+    Info<< "Patches to perturb: " << pertPatches << endl;
 
     if(pertType == "turbsim")
     {
-        word pertFieldName(pertDict.lookup("turbsimField"));
-        fileName fpath = runTime.time().constant() / "boundaryData" / pertFieldName+".bts";
-        read_bts(fpath);
+        forAll(pertPatches, patchI)
+        {
+            //label patchID(mesh.boundary().findPatchID(pertPatches[patchI]));
+            //Info<< "Patch " << pertPatches[patchI] << " id =" << patchID << endl;
+
+            //Info<< mesh.boundary()[pertPatches[patchI]] << endl;
+
+            word pertFieldName(pertDict.lookup("turbsimField"));
+            fileName fpath = runTime.time().constant() / "boundaryData" / pertFieldName+".bts";
+            read_bts(fpath);
+            //read_bts(fpath, mesh.boundary()[pertPatches[patchI]]);
+
+            break; // DEBUG
+        }
+    }
+    else
+    {
+        Info<< "Synthetic turbulence type not recognized: " << pertType << endl;
     }
 
     Info<< "\nEnd\n" << endl;
