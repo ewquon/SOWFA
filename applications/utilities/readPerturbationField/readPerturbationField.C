@@ -323,9 +323,6 @@ int main(int argc, char *argv[])
 {
 #   include "setRootCase.H"
 #   include "createTime.H"
-    // Note: Creating the mesh object results in probably the same segfault as
-    //       setFieldsABL, i.e., with a double free or corruption error
-    //       terminated by signal 6... Another problem for another day.
 //#   include "createNamedMesh.H"
 
     IOdictionary pertDict
