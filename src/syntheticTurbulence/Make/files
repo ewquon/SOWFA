@@ -1,0 +1,7 @@
+perturbations/perturbations.C
+
+turbsim/turbsimBTS.C
+
+/* TODO: gabor/gaborKS.C */
+
+LIB = $(FOAM_USER_LIBBIN)/libusersyntheticTurbulence
