@@ -38,6 +38,8 @@ Description
 
 #include "fvCFD.H"
 
+//#include "syntheticTurbulence.H" // is this necessary?
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -58,7 +60,7 @@ protected:
         const Time& runTime_;
 
         //- Mesh pointer.
-        const fvMesh& mesh_;
+//        const fvMesh& mesh_;
 
         //- Input dictionary
         IOdictionary perturbDict_;
@@ -67,7 +69,7 @@ protected:
         word perturbType_;
         List<word> perturbPatches_;
 
-    //- Field parameters
+    //- Protected field parameters
 
         //- Inflow plane dimensions
         //  (in plane-aligned coordinates: y=lateral, z=vertical)
@@ -86,7 +88,7 @@ protected:
         scalar period;
         bool periodic;
 
-    //- Field variables
+    //- Protected field variables
 
         //- Time vector
         DynamicList<scalar> t;
@@ -98,15 +100,27 @@ protected:
         DynamicList<List<vector> > perturb;
 
 
-    // Private Member Functions
-
 public:
+    //- Runtime type information
+//    TypeName("perturbations");
+//    ClassName("perturbations");
+//    ClassNameNoDebug("perturbations");
+
+//    static const char* typeName_() { return "perturbations"; }
+//    static const ::Foam::word typeName;
+//    static int debug;
+//    virtual const word& type() const { return typeName; }
     
     //- Constructor
     perturbations
     (
-        const volVectorField& U
+        const Time& runTime
     );
+//    perturbations
+//    (
+//        const Time& runTime,
+//        const fvMesh& mesh
+//    );
     
     //- Destructor
     virtual ~perturbations()
@@ -115,7 +129,7 @@ public:
     // Public Member Functions
 
         //- get statistics of the inflow field
-        virtual void calcStats();
+        //virtual void calcStats();
 
 };
 

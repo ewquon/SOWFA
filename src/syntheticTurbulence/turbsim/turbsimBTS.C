@@ -31,10 +31,10 @@ namespace syntheticTurbulence
 
 turbsimBTS::turbsimBTS
 (
-    const volVectorField& U
+    const Time& runTime
 )
 :
-    perturbations(U)
+    perturbations(runTime)
 {
     word fieldName(perturbDict_.lookup("turbsimField"));
     fileName fpath = runTime_.time().constant() / "boundaryData" / fieldName+".bts";

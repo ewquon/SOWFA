@@ -35,6 +35,8 @@ Description
 #include "fvCFD.H"
 #include "vectorList.H"
 
+#include "turbsimBTS.H"
+
 #ifndef namespaceFoam
 #define namespaceFoam
     using namespace Foam;
@@ -42,6 +44,7 @@ Description
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+/*
 // Read a TurbSim binary full-field time series (.bts) file and map the
 // fluctuating velocity field to a specified boundary patch
 void read_bts(word fname)
@@ -150,7 +153,7 @@ void read_bts(word fname)
         }
         Info<< " done!" << endl;
 
-//        if(Ntower > 0)/*{{{*/
+//        if(Ntower > 0)
 //        {
 //            Info<< "Reading normalized tower data...";
 //            bts.read(reinterpret_cast<char*>(ivals_tow.data()), ivals_tow.size()*sizeof(short));
@@ -172,9 +175,9 @@ void read_bts(word fname)
 //                }
 //            }
 //            Info<< " done!" << endl;
-//        }/*}}}*/
+//        }
 
-        // calculate coordinates/*{{{*/
+        // calculate coordinates
         float y[NY], z[NZ];
         vectorList points(NY*NZ);
         float t[N];
@@ -243,7 +246,7 @@ void read_bts(word fname)
         //forAll(patch.Cf(), faceI)
         //{
         //    Info<< patch.Cf()[faceI] << endl;
-        //}/*}}}*/
+        //}
 
         // create list of vector fields (one list item per time)
         // reorder the list to be consistent with column-major ordering
@@ -318,6 +321,7 @@ void read_bts(word fname)
             << exit(FatalError);
     }
 }
+*/
 
 int main(int argc, char *argv[])
 {
@@ -343,6 +347,7 @@ int main(int argc, char *argv[])
 
     if(pertType == "turbsim")
     {
+/*
         forAll(pertPatches, patchI)
         {
             //label patchID(mesh.boundary().findPatchID(pertPatches[patchI]));
@@ -357,6 +362,12 @@ int main(int argc, char *argv[])
 
             break; // DEBUG
         }
+*/
+
+        syntheticTurbulence::turbsimBTS ts(runTime);
+        //turbsimBTS ts(runTime);
+        ts.calcStats();
+
     }
     else
     {

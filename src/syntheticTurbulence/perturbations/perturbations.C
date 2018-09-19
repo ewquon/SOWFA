@@ -31,14 +31,14 @@ namespace syntheticTurbulence
 
 perturbations::perturbations
 (
-    const volVectorField& U
+    const Time& runTime
 )
 :
     // Set the pointer to runTime
-    runTime_(U.time()),
+    runTime_(runTime),
 
     // Set the pointer to the mesh
-    mesh_(U.mesh()),
+//    mesh_(mesh),
 
     // Read the dictionary describing the perturbation strategy
     perturbDict_

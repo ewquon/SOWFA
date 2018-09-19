@@ -65,12 +65,19 @@ private:
     //void read(word fname, const fvPatch &patch);
 
 public:
+    //- Runtime type information
+//    TypeName("turbsimBTS");
     
     //- Constructor
     turbsimBTS
     (
-        const volVectorField& U
+        const Time& runTime
     );
+//    turbsimBTS
+//    (
+//        const Time& runTime,
+//        const fvMesh& mesh
+//    );
     
     //- Destructor
     virtual ~turbsimBTS()
