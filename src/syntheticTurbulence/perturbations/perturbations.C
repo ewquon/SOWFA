@@ -68,6 +68,30 @@ perturbations::perturbations
     (
         readScalar(perturbDict_.lookup("perturbedLayerTop"))
     ),
+    perturbedLayerCutoff_
+    (
+        perturbDict_.lookupOrDefault<word>
+        (
+            "perturbedLayerCutoff",
+            "tanh" // simple | tanh
+        )
+    ),
+    transitionThickness_
+    (
+        perturbDict_.lookupOrDefault<scalar>
+        (
+            "transitionThickness",
+            50.0
+        )
+    ),
+    transitionEdgeScaling_
+    (
+        perturbDict_.lookupOrDefault<scalar>
+        (
+            "transitionEdgeScaling",
+            0.97
+        )
+    ),
 
     // Initialize field variables (to be read in by derived class)
     Ny(0),
@@ -83,20 +107,40 @@ perturbations::perturbations
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
 
+inline scalar perturbations::tanhScaling(scalar z) const
+{
+    return 0.5 * Foam::tanh( 2 * tanhParam * (z-perturbedLayerTop_) / transitionThickness_ ) + 0.5;
+}
+
 void perturbations::setScaling()
 {
     scaling.resize(Ny*Nz);
-    Info<< "Setup simple scaling";
-    forAll(scaling, I)
+    if(perturbedLayerCutoff_ == "simple")
     {
-        if(points[I].z() < perturbedLayerTop_)
+        Info<< "Setup scaling with simple cutoff" << endl;
+        forAll(scaling, I)
         {
-            scaling[I] = vector::one;
-        }     
-        else  
-        {     
-            scaling[I] = vector::zero;
+            if(points[I].z() < perturbedLayerTop_)
+            {
+                scaling[I] = vector::one;
+            }     
+            else  
+            {     
+                scaling[I] = vector::zero;
+            }
         }
+    }
+    else if(perturbedLayerCutoff_ == "tanh")
+    {
+        Info<< "Setup scaling with tanh cutoff" << endl;
+        tanhParam = -Foam::atanh(2*transitionEdgeScaling_ - 1);
+    }
+    else
+    {
+        FatalError
+            << "Cutoff method " << perturbedLayerCutoff_
+            << " not recognized" << nl
+            << exit(FatalError);
     }
 }
 
@@ -140,6 +184,33 @@ List<vector> perturbations::getPerturbationsAtTime(scalar t) const
         }
     }
     return U;
+}
+
+void perturbations::printScaling()
+{
+    scalar zval;
+    Info<< "Scaling function: [";
+    zval = points[0].z();
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    Info<< " ...";
+    zval = perturbedLayerTop_ - 2.0*transitionThickness_;
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    zval = perturbedLayerTop_ - 1.0*transitionThickness_;
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    zval = perturbedLayerTop_ - 0.5*transitionThickness_;
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    zval = perturbedLayerTop_;
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    zval = perturbedLayerTop_ + 0.5*transitionThickness_;
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    zval = perturbedLayerTop_ + 1.0*transitionThickness_;
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    zval = perturbedLayerTop_ + 2.0*transitionThickness_;
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    Info<< " ...";
+    zval = points[points.size()-1].z();
+    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
+    Info<< "]" << endl;
 }
 
 

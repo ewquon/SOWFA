@@ -68,7 +68,12 @@ protected:
         //- Input properties
         word perturbType_;
         List<word> perturbPatches_;
+
+        //- Scaling properties
         scalar perturbedLayerTop_;
+        word perturbedLayerCutoff_;
+        scalar transitionThickness_;
+        scalar transitionEdgeScaling_;
 
     //- Protected field parameters
 
@@ -109,6 +114,17 @@ protected:
         //- Set scaling factors
         void setScaling();
 
+private:
+    //- Private variables
+    
+        //- Scaling parameters
+        scalar tanhParam; // "k", where s(z) = 0.5*tanh(k*(z-ztop)/(width/2)) + 0.5
+
+    //- Private variables
+    
+        //- Scaling functions
+        inline scalar tanhScaling(scalar z) const;
+
 public:
     //- Runtime type information
 //    TypeName("perturbations");
@@ -139,6 +155,9 @@ public:
     {}
 
     // Public Member Functions
+
+        //- print out the scaling function (for debug)
+        void printScaling();
 
         //- get statistics of the perturbation field
         virtual void calcStats() = 0;

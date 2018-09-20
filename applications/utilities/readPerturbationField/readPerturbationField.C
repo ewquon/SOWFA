@@ -366,6 +366,7 @@ int main(int argc, char *argv[])
 
         syntheticTurbulence::turbsimBTS ts(runTime);
         //turbsimBTS ts(runTime);
+        ts.printScaling();
         ts.calcStats();
 
         vectorList U;
