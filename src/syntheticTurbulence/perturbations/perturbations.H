@@ -38,7 +38,7 @@ Description
 
 #include "fvCFD.H"
 
-//#include "syntheticTurbulence.H" // is this necessary?
+//#include "syntheticTurbulence.H" // is this needed?
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -104,9 +104,11 @@ public:
     //- Runtime type information
 //    TypeName("perturbations");
 
+// TypeName:
 //    ClassName("perturbations");
 //    ClassNameNoDebug("perturbations");
 
+// ClassNameNoDebug:
 //    static const char* typeName_() { return "perturbations"; }
 //    static const ::Foam::word typeName;
 //    static int debug;
@@ -130,7 +132,7 @@ public:
     // Public Member Functions
 
         //- get statistics of the inflow field
-        //virtual void calcStats();
+        virtual void calcStats() = 0;
 
 };
 
