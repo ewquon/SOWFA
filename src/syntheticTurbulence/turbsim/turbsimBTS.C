@@ -67,6 +67,7 @@ void turbsimBTS::read(word fname)
 
         // working vars
         int idx; // flattened index
+        float dummy; 
 
         bts.read(reinterpret_cast<char*>(&id), sizeof(id));
         //assert( id==7 || id==8 )
@@ -97,12 +98,15 @@ void turbsimBTS::read(word fname)
 
         bts.read(reinterpret_cast<char*>(&dy), sizeof(dy));
         bts.read(reinterpret_cast<char*>(&dz), sizeof(dz));
-        bts.read(reinterpret_cast<char*>(&dt), sizeof(dt));
         Info<< "dy, dz = " << dy << " " << dz << endl;
-        Info<< "dt = " << dt << endl;
 
-        period = Nt * dt;
-        Info<< "period = " << period << endl;
+        //bts.read(reinterpret_cast<char*>(&dt), sizeof(dt));
+        bts.read(reinterpret_cast<char*>(&dummy), sizeof(dummy));
+        //period = Nt * dt;
+        period = Nt * dummy;
+        dt = period / Nt; // hack to get a more accurate dt
+        Info<< "period, dt = " << period << " " << dt << endl;
+
         if(!periodic) period *= -1;
 
         // read reference values

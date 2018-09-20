@@ -82,7 +82,8 @@ protected:
         int Nt;
 
         //- Inflow time-step size
-        float dt;
+        //float dt;
+        scalar dt;
 
         //- Time-series period (< 0 if aperiodic)
         scalar period;
