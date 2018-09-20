@@ -368,6 +368,18 @@ int main(int argc, char *argv[])
         //turbsimBTS ts(runTime);
         ts.calcStats();
 
+        vectorList U;
+        U = ts.getPerturbationsAtTime(-1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(0); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(1.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(1.05); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(599.95); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(599.975); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(600); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(601.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+        U = ts.getPerturbationsAtTime(1201.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+
     }
     else
     {

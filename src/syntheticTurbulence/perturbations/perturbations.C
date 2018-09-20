@@ -79,6 +79,48 @@ perturbations::perturbations
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
 
+List<vector> perturbations::getPerturbationsAtTime(scalar t) const
+{
+    Info<< "Requested perturbations at time " << t << endl;
+    List<vector> U;
+    if( t < times[0] )
+    {
+        Info<< "WARNING: t < " << times[0] << endl;
+        U = perturb[0];
+    }
+    else if( !periodic && t > times[times.size()-1] )
+    {
+        Info<< "WARNING: t > " << times[times.size()-1] << endl;
+        U = perturb[times.size()-1];
+    }
+    else
+    {
+        if(periodic)
+        {
+            t -= int(t/period)*period;
+            Info<< "  mapped to t = " << t;
+        }
+        label i;
+        for(i=1; i<times.size(); ++i)
+        {
+            if(times[i] > t) break;
+        }
+        if(i<times.size())
+        {
+            Info<< "  between " << times[i-1] << " and " << times[i] << endl;
+            U = perturb[i-1]
+                + (perturb[i]-perturb[i-1])/(times[i]-times[i-1]) * (t-times[i-1]);
+        }
+        else
+        {
+            Info<< "  between " << times[i-1] << " and " << period << endl;
+            U = perturb[i-1]
+                + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
+        }
+    }
+    return U;
+}
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

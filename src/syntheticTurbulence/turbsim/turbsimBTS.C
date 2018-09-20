@@ -198,15 +198,15 @@ void turbsimBTS::read(word fname)
         Info<< " ]" << endl;
 
         // calculate inflow time vector
-        t.setSize(Nt);
+        times.setSize(Nt);
         Info<< "t: " << Nt << " [";
         for(int i=0; i<Nt; ++i)
         {
-            t[i] = i*dt;
+            times[i] = i*dt;
 
             if((i < 3) || (i >= Nt-2))
             {
-                Info<< " " << t[i];
+                Info<< " " << times[i];
             }
             else if(i==3)
             {

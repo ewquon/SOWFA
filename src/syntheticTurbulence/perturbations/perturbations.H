@@ -91,13 +91,15 @@ protected:
     //- Protected field variables
 
         //- Time vector
-        DynamicList<scalar> t;
+        DynamicList<scalar> times;
 
         //- Coordinate vectors
         DynamicList<List<vector> > points;
 
         //- List of inflow perturbation fields (one list item per time instance)
         DynamicList<List<vector> > perturb;
+
+    //- Protected functions
 
 
 public:
@@ -131,8 +133,11 @@ public:
 
     // Public Member Functions
 
-        //- get statistics of the inflow field
+        //- get statistics of the perturbation field
         virtual void calcStats() = 0;
+
+        //- get perturbation field at time
+        List<vector> getPerturbationsAtTime(scalar t) const;
 
 };
 
