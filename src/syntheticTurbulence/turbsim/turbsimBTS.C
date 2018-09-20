@@ -165,7 +165,7 @@ void turbsimBTS::read(word fname)
         for(int j=0; j<Ny; ++j)
         {
             //y = -0.5*(NY-1)*dy + j*dy; // original TurbSim plane
-            y[j] = j*dy - dy/2;
+            y[j] = (j+0.5)*dy;
 
             if((j < 3) || (j >= Ny-2))
             {
@@ -184,7 +184,7 @@ void turbsimBTS::read(word fname)
         for(int k=0; k<Nz; ++k)
         {
             //z[k] = k*dz + zbot; // original TurbSim plane
-            z[k] = k*dz - dz/2;
+            z[k] = (k+0.5)*dz;
 
             if((k < 3) || (k >= Nz-2))
             {
