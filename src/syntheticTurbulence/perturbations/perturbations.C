@@ -64,8 +64,12 @@ perturbations::perturbations
     (
         perturbDict_.lookup("perturbedPatches")
     ),
+    perturbedLayerTop_
+    (
+        readScalar(perturbDict_.lookup("perturbedLayerTop"))
+    ),
 
-    // Initialize field variables
+    // Initialize field variables (to be read in by derived class)
     Ny(0),
     Nz(0),
     dy(0.0),
@@ -78,6 +82,23 @@ perturbations::perturbations
 {}
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
+
+void perturbations::setScaling()
+{
+    scaling.resize(Ny*Nz);
+    Info<< "Setup simple scaling";
+    forAll(scaling, I)
+    {
+        if(points[I].z() < perturbedLayerTop_)
+        {
+            scaling[I] = vector::one;
+        }     
+        else  
+        {     
+            scaling[I] = vector::zero;
+        }
+    }
+}
 
 List<vector> perturbations::getPerturbationsAtTime(scalar t) const
 {

@@ -68,6 +68,7 @@ protected:
         //- Input properties
         word perturbType_;
         List<word> perturbPatches_;
+        scalar perturbedLayerTop_;
 
     //- Protected field parameters
 
@@ -95,13 +96,18 @@ protected:
         DynamicList<scalar> times;
 
         //- Coordinate vectors
-        DynamicList<List<vector> > points;
+        DynamicList<vector> points;
 
         //- List of inflow perturbation fields (one list item per time instance)
         DynamicList<List<vector> > perturb;
 
+        //- List of perturbation scaling factors
+        DynamicList<vector> scaling;
+
     //- Protected functions
 
+        //- Set scaling factors
+        void setScaling();
 
 public:
     //- Runtime type information

@@ -39,6 +39,7 @@ turbsimBTS::turbsimBTS
     word fieldName(perturbDict_.lookup("turbsimField"));
     fileName fpath = runTime_.time().constant() / "boundaryData" / fieldName+".bts";
     read(fpath);
+    setScaling();
 }
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
