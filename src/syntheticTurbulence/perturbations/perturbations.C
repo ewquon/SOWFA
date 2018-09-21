@@ -122,11 +122,11 @@ void perturbations::setScaling()
         {
             if(points[I].z() < perturbedLayerTop_)
             {
-                scaling[I] = vector::one;
+                scaling[I] = 1.0; //vector::one;
             }     
             else  
             {     
-                scaling[I] = vector::zero;
+                scaling[I] = 0.0; //vector::zero;
             }
         }
     }
@@ -134,6 +134,10 @@ void perturbations::setScaling()
     {
         Info<< "Setup scaling with tanh cutoff" << endl;
         tanhParam = -Foam::atanh(2*transitionEdgeScaling_ - 1);
+        forAll(scaling, I)
+        {
+            scaling[I] = tanhScaling(points[I].z());
+        }
     }
     else
     {
@@ -183,7 +187,7 @@ List<vector> perturbations::getPerturbationsAtTime(scalar t) const
                 + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
         }
     }
-    return U;
+    return scaling*U;
 }
 
 void perturbations::printScaling()

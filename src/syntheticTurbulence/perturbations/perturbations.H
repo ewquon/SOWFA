@@ -107,7 +107,7 @@ protected:
         DynamicList<List<vector> > perturb;
 
         //- List of perturbation scaling factors
-        DynamicList<vector> scaling;
+        DynamicList<scalar> scaling;
 
     //- Protected functions
 
