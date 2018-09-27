@@ -59,7 +59,9 @@ Description
         Property     | Description             | Required    | Default value
         setAverage   | flag to activate setting of average value | yes |
         perturb      | perturb points for regular geometries | no | 1e-5
-        fieldTableName | alternative field name to sample | no| this field name
+        fixesValue   | prevent adjustPhi from correcting the flux on this boundary | no | no
+        fieldPerturbations | add synthetic turbulence | no | no
+        fieldTableName | alternative field name to sample | no | this field name
         mapMethod    | type of mapping | no | planarInterpolation
         offset   | for applying offset to mapped values  | no | constant 0.0
     \endtable
@@ -129,8 +131,11 @@ private:
         //- Fraction of perturbation (fraction of bounding box) to add
         scalar perturb_;
 
-	//- Does this boundary fix values so that they can't be adjusted by adjustPhi
-	bool fixesValue_;
+        //- Does this boundary fix values so that they can't be adjusted by adjustPhi
+        bool fixesValue_;
+
+        //- Add synthetic turbulence (e.g., velocity perturbations)
+        bool fieldPerturbations_;
 
         //- Interpolation scheme to use
         word mapMethod_;

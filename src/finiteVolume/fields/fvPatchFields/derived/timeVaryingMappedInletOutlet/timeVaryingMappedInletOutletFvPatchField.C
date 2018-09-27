@@ -47,7 +47,8 @@ timeVaryingMappedInletOutletFvPatchField
     fieldTableName_(iF.name()),
     setAverage_(false),
     perturb_(0),
-    fixesValue_(true),
+    fixesValue_(false),
+    fieldPerturbations_(false),
     mapperPtr_(NULL),
     sampleTimes_(0),
     startSampleTime_(-1),
@@ -80,6 +81,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
     fixesValue_(ptf.fixesValue_),
+    fieldPerturbations_(ptf.fieldPerturbations_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(NULL),
     sampleTimes_(0),
@@ -113,6 +115,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(readBool(dict.lookup("setAverage"))),
     perturb_(dict.lookupOrDefault("perturb", 1e-5)),
     fixesValue_(readBool(dict.lookup("fixesValue"))),
+    fieldPerturbations_(readBool(dict.lookup("fieldPerturbations"))),
     mapMethod_
     (
         dict.lookupOrDefault<word>
@@ -189,6 +192,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
     fixesValue_(ptf.fixesValue_),
+    fieldPerturbations_(ptf.fieldPerturbations_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(NULL),
     sampleTimes_(ptf.sampleTimes_),
@@ -221,6 +225,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
     fixesValue_(ptf.fixesValue_),
+    fieldPerturbations_(ptf.fieldPerturbations_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(NULL),
     sampleTimes_(ptf.sampleTimes_),
@@ -686,6 +691,8 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::write(Ostream& os) const
     }
 
     os.writeKeyword("fixesValue") << fixesValue_ << token::END_STATEMENT << nl;
+
+    os.writeKeyword("fieldPerturbations") << fieldPerturbations_ << token::END_STATEMENT << nl;
 
     if (fieldTableName_ != this->dimensionedInternalField().name())
     {
