@@ -46,10 +46,24 @@ Description
 
 int main(int argc, char *argv[])
 {
-#   include "setRootCase.H"
-#   include "createTime.H"
-//#   include "createNamedMesh.H"
+    argList::addNote
+    (
+        "Utility for testing the syntheticTurbulence library"
+    );
 
+#   include "addRegionOption.H"
+    argList::addOption
+    (
+        "fields",
+        "wordList",
+        "perturbed patches corresponding to timeVaryingMapped BCs"
+    );
+
+#   include "setRootCase.H"
+    List<word> pertPatches = args.optionRead<wordList>("fields");
+    Info<< "Specified patches: " << pertPatches << endl;
+
+#   include "createTime.H"
     IOdictionary pertDict
     (
         IOobject
@@ -62,35 +76,44 @@ int main(int argc, char *argv[])
         )
     );
 
-    word pertType(pertDict.lookupOrDefault<word>("syntheticTurbulenceType", "turbsim"));
-    List<word> pertPatches(pertDict.lookup("perturbedPatches"));
-    Info<< "Patches to perturb: " << pertPatches << endl;
+    word pertType
+    (
+        pertDict.lookupOrDefault<word>("syntheticTurbulenceType", "turbsim")
+    );
 
-    if(pertType == "turbsim")
+#   include "createNamedMesh.H"
+
+    forAll(pertPatches, patchI)
     {
-        // TODO: runtime selectable
-        syntheticTurbulence::turbsimBTS ts(runTime);
+        label patchID(mesh.boundary().findPatchID(pertPatches[patchI]));
+        Info<< "Patch " << pertPatches[patchI] << " id =" << patchID << endl;
 
-        ts.printScaling();
-        ts.calcStats();
+        if(pertType == "turbsim")
+        {
+            // TODO: runtime selectable
+            syntheticTurbulence::turbsimBTS ts(mesh.boundary()[patchID]);
 
-        // test interpolation between inflow planes
-        vectorList U;
-        U = ts.getPerturbationsAtTime(-1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(0); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(1.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(1.05); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(599.95); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(599.975); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(600); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(601.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
-        U = ts.getPerturbationsAtTime(1201.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            ts.printScaling();
+            ts.calcStats();
 
-    }
-    else
-    {
-        Info<< "Synthetic turbulence type not recognized: " << pertType << endl;
+            // test interpolation between inflow planes
+            vectorList U;
+            U = ts.getPerturbationsAtTime(-1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(0); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(1.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(1.05); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(599.95); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(599.975); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(600); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(601.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+            U = ts.getPerturbationsAtTime(1201.025); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
+
+        }
+        else
+        {
+            Info<< "Synthetic turbulence type not recognized: " << pertType << endl;
+        }
     }
 
     Info<< "\nEnd\n" << endl;
