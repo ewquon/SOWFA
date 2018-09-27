@@ -95,6 +95,8 @@ SourceFiles
 #include "pointToPointPlanarInterpolation.H"
 #include "DataEntry.H"
 
+#include "turbsimBTS.H"
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -135,7 +137,7 @@ private:
         bool fixesValue_;
 
         //- Add synthetic turbulence (e.g., velocity perturbations)
-        bool fieldPerturbations_;
+        bool addPerturbations_;
 
         //- Interpolation scheme to use
         word mapMethod_;
@@ -166,6 +168,12 @@ private:
 
         //- Time varying offset values to interpolated data
         autoPtr<DataEntry<Type> > offset_;
+
+        //- synthetic turbulence fields
+        // TODO: make this runtime selectable, check consistency with Type
+        syntheticTurbulence::turbsimBTS *synthTurb_;
+        // TODO: handle temperature perturbations
+        //perturbations temperatureFluctuations_;
 
 
 public:
@@ -234,6 +242,10 @@ public:
                 new timeVaryingMappedInletOutletFvPatchField<Type>(*this, iF)
             );
         }
+
+    // Destructor
+
+        ~timeVaryingMappedInletOutletFvPatchField();
 
 
     // Member functions

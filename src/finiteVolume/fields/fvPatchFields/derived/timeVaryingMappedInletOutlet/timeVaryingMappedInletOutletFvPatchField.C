@@ -48,7 +48,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(false),
     perturb_(0),
     fixesValue_(false),
-    fieldPerturbations_(false),
+    addPerturbations_(false),
     mapperPtr_(NULL),
     sampleTimes_(0),
     startSampleTime_(-1),
@@ -81,7 +81,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
     fixesValue_(ptf.fixesValue_),
-    fieldPerturbations_(ptf.fieldPerturbations_),
+    addPerturbations_(ptf.addPerturbations_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(NULL),
     sampleTimes_(0),
@@ -97,7 +97,13 @@ timeVaryingMappedInletOutletFvPatchField
       ? ptf.offset_().clone().ptr()
       : NULL
     )
-{}
+{
+    if(addPerturbations_)
+    {
+        // TODO: runtime select perturbations type; turbsim hard-coded for now
+        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+    }
+}
 
 // #3
 template<class Type>
@@ -114,8 +120,8 @@ timeVaryingMappedInletOutletFvPatchField
     fieldTableName_(iF.name()),
     setAverage_(readBool(dict.lookup("setAverage"))),
     perturb_(dict.lookupOrDefault("perturb", 1e-5)),
-    fixesValue_(readBool(dict.lookup("fixesValue"))),
-    fieldPerturbations_(readBool(dict.lookup("fieldPerturbations"))),
+    fixesValue_(dict.lookupOrDefault<bool>("fixesValue",false)),
+    addPerturbations_(dict.lookupOrDefault<bool>("addPerturbations",false)),
     mapMethod_
     (
         dict.lookupOrDefault<word>
@@ -176,6 +182,12 @@ timeVaryingMappedInletOutletFvPatchField
     this->refValue() = *this;
     this->refGrad() = pTraits<Type>::zero;
     this->valueFraction() = 0.0;
+
+    if(addPerturbations_)
+    {
+        // TODO: runtime select perturbations type; turbsim hard-coded for now
+        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+    }
 }
 
 // #5
@@ -192,7 +204,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
     fixesValue_(ptf.fixesValue_),
-    fieldPerturbations_(ptf.fieldPerturbations_),
+    addPerturbations_(ptf.addPerturbations_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(NULL),
     sampleTimes_(ptf.sampleTimes_),
@@ -208,7 +220,13 @@ timeVaryingMappedInletOutletFvPatchField
       ? ptf.offset_().clone().ptr()
       : NULL
     )
-{}
+{
+    if(addPerturbations_)
+    {
+        // TODO: runtime select perturbations type; turbsim hard-coded for now
+        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+    }
+}
 
 // #6
 template<class Type>
@@ -225,7 +243,7 @@ timeVaryingMappedInletOutletFvPatchField
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
     fixesValue_(ptf.fixesValue_),
-    fieldPerturbations_(ptf.fieldPerturbations_),
+    addPerturbations_(ptf.addPerturbations_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(NULL),
     sampleTimes_(ptf.sampleTimes_),
@@ -241,7 +259,24 @@ timeVaryingMappedInletOutletFvPatchField
       ? ptf.offset_().clone().ptr()
       : NULL
     )
-{}
+{
+    if(addPerturbations_)
+    {
+        // TODO: runtime select perturbations type; turbsim hard-coded for now
+        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+    }
+}
+
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+template <class Type>
+timeVaryingMappedInletOutletFvPatchField<Type>::~timeVaryingMappedInletOutletFvPatchField()
+{
+    if(addPerturbations_)
+    {
+        delete synthTurb_;
+    }
+}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -692,7 +727,7 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::write(Ostream& os) const
 
     os.writeKeyword("fixesValue") << fixesValue_ << token::END_STATEMENT << nl;
 
-    os.writeKeyword("fieldPerturbations") << fieldPerturbations_ << token::END_STATEMENT << nl;
+    os.writeKeyword("addPerturbations") << addPerturbations_ << token::END_STATEMENT << nl;
 
     if (fieldTableName_ != this->dimensionedInternalField().name())
     {

@@ -4,9 +4,11 @@ EXE_INC = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/transportModels \
     -I$(LIB_SRC)/transportModels/incompressible/lnInclude/ \
-
+    -I../syntheticTurbulence/lnInclude
 
 LIB_LIBS = \
+    -L$(FOAM_USER_LIBBIN) \
     -lOpenFOAM \
     -ltriSurface \
-    -lmeshTools
+    -lmeshTools \
+    -lusersyntheticTurbulence
