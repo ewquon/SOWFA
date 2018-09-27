@@ -31,14 +31,14 @@ namespace syntheticTurbulence
 
 perturbations::perturbations
 (
-    const Time& runTime
+    const fvPatch& p
 )
 :
     // Set the pointer to runTime
-    runTime_(runTime),
+    runTime_(p.boundaryMesh().mesh().time()),
 
     // Set the pointer to the mesh
-//    mesh_(mesh),
+    patch_(p),
 
     // Read the dictionary describing the perturbation strategy
     perturbDict_

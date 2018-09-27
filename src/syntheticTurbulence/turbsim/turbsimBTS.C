@@ -31,12 +31,13 @@ namespace syntheticTurbulence
 
 turbsimBTS::turbsimBTS
 (
-    const Time& runTime
+    const fvPatch& p
 )
 :
-    perturbations(runTime)
+    perturbations(p)
 {
     word fieldName(perturbDict_.lookup("turbsimField"));
+    Pout<< "Creating turbsimBTS object for " << fieldName << endl;
     fileName fpath = runTime_.time().constant() / "boundaryData" / fieldName+".bts";
     read(fpath);
     setScaling();
@@ -44,14 +45,14 @@ turbsimBTS::turbsimBTS
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
 
-void turbsimBTS::read(word fname)
+void turbsimBTS::read(word fpath)
 //void read(word fname, const fvPatch &patch)
 {
-    std::ifstream bts(fname.c_str(), std::ios::binary);
+    std::ifstream bts(fpath.c_str(), std::ios::binary);
     if(bts)
     {
         bts.seekg(0, std::ios_base::end);
-        Info<< "Reading " << fname
+        Info<< "Reading " << fpath
             << " (" << bts.tellg() << " bytes)"
             << endl;
         bts.seekg(0, std::ios_base::beg);
@@ -263,7 +264,7 @@ void turbsimBTS::read(word fname)
     else
     {
         FatalError
-            << fname << " not found" << nl
+            << fpath << " not found" << nl
             << exit(FatalError);
     }
 }

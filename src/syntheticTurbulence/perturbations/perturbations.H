@@ -59,8 +59,8 @@ protected:
         //- Runtime pointer.
         const Time& runTime_;
 
-        //- Mesh pointer.
-//        const fvMesh& mesh_;
+        //- Patch pointer.
+        const fvPatch& patch_;
 
         //- Input dictionary
         IOdictionary perturbDict_;
@@ -140,15 +140,21 @@ public:
 //    virtual const word& type() const { return typeName; }
     
     //- Constructor
-    perturbations
-    (
-        const Time& runTime
-    );
+    // initialize with top-level database only (no patch-specific information)
 //    perturbations
 //    (
-//        const Time& runTime,
-//        const fvMesh& mesh
+//        const Time&
 //    );
+    // initialize with mesh reference (no patch-specific information)
+//    perturbations
+//    (
+//        const fvMesh&
+//    );
+    // initialize with patch reference
+    perturbations
+    (
+        const fvPatch&
+    );
     
     //- Destructor
     virtual ~perturbations()

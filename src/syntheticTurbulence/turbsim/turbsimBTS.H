@@ -69,15 +69,19 @@ public:
 //    TypeName("turbsimBTS");
     
     //- Constructor
-    turbsimBTS
-    (
-        const Time& runTime
-    );
 //    turbsimBTS
 //    (
-//        const Time& runTime,
-//        const fvMesh& mesh
+//        const Time&
 //    );
+//    turbsimBTS
+//    (
+//        const Time&,
+//        const fvMesh&
+//    );
+    turbsimBTS
+    (
+        const fvPatch&
+    );
     
     //- Destructor
     virtual ~turbsimBTS()
