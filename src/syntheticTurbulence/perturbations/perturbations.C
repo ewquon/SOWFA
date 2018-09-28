@@ -104,9 +104,12 @@ perturbations::perturbations
     periodic(false),
     minU(0), minV(0), minW(0),
     maxU(0), maxV(0), maxW(0),
-    stdU(0), stdV(0), stdW(0)
+    stdU(0), stdV(0), stdW(0),
 
-{}
+    mapperPtr_(NULL)
+
+{
+}
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
 
@@ -151,9 +154,44 @@ void perturbations::setScaling()
     }
 }
 
-List<vector> perturbations::getPerturbationsAtTime(scalar t) const
+void perturbations::setupMapper()
 {
-    Info<< "Requested perturbations at time " << t << endl;
+    Info<< "Setting up planar interpolation between the "
+        << perturbType_ << " perturbation field "
+        << "and patch " << patch_.name()
+        << endl;
+
+    // set up inflow points field (i.e., the "samplePoints")
+    pointField inflowPoints(points);
+
+    Info<< inflowPoints << endl;
+    Info<< patch_.Cf() << endl;
+
+    // allocate the planar interpolator
+    mapperPtr_.reset
+    (
+        new pointToPointPlanarInterpolation
+        (
+            inflowPoints, // source
+            patch_.Cf(), // destination
+            1e-5, // default perturb_ value from TVM* BCs
+            false // nearestOnly flag
+        )
+    );
+}
+
+Field<vector> perturbations::getPerturbationsAtTime
+(
+    scalar t,
+    scalar ang
+)
+{
+    if(mapperPtr_.empty()) setupMapper();
+
+    Pout<< "Requested perturbations at time " << t
+        << " with rotation angle "
+        << 180.0/Foam::constant::mathematical::pi * ang << " deg"
+        << endl;
     List<vector> U;
     if( t < times[0] )
     {
@@ -190,7 +228,31 @@ List<vector> perturbations::getPerturbationsAtTime(scalar t) const
                 + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
         }
     }
-    return scaling*U;
+
+    // rotate to align streamwise components
+    Field<vector> rotatedU(U.size());
+    forAll(U, faceI)
+    {
+        rotatedU[faceI].x() = U[faceI].x()*Foam::cos(ang) - U[faceI].y()*Foam::sin(ang);
+        rotatedU[faceI].y() = U[faceI].x()*Foam::sin(ang) + U[faceI].y()*Foam::cos(ang);
+        rotatedU[faceI].z() = U[faceI].z();
+    }
+
+    // return field mapped to boundary patch 
+    if(rotatedU.size() != mapperPtr_().sourceSize())
+    {
+        FatalErrorIn
+        (
+            "perturbations<Type>::"
+            "getPerturbationsAtTime()"
+        )   << "Number of values (" << rotatedU.size()
+            << ") differs from the number of points ("
+            <<  mapperPtr_().sourceSize()
+            << ")"
+            << exit(FatalError);
+    }
+
+    return mapperPtr_().interpolate(rotatedU);
 }
 
 void perturbations::printScaling()

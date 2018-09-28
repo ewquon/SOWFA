@@ -50,6 +50,7 @@ namespace syntheticTurbulence
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// TODO: make template<class Type>
 class perturbations
 {
 
@@ -67,7 +68,7 @@ protected:
 
         //- Input properties
         word perturbType_;
-        List<word> perturbPatches_;
+        //List<word> perturbPatches_;
 
         //- Scaling properties
         scalar perturbedLayerTop_;
@@ -109,6 +110,7 @@ protected:
         DynamicList<vector> points;
 
         //- List of inflow perturbation fields (one list item per time instance)
+        // TODO: make template<class Type>
         DynamicList<List<vector> > perturb;
 
         //- List of perturbation scaling factors
@@ -125,10 +127,16 @@ private:
         //- Scaling parameters
         scalar tanhParam; // "k", where s(z) = 0.5*tanh(k*(z-ztop)/(width/2)) + 0.5
 
-    //- Private variables
+        //- Planar interpolation
+        autoPtr<pointToPointPlanarInterpolation> mapperPtr_;
+
+    //- Private functions
     
         //- Scaling functions
         inline scalar tanhScaling(scalar z) const;
+
+        //- Planar interpolation
+        void setupMapper();
 
 public:
     //- Runtime type information
@@ -173,8 +181,15 @@ public:
         //- get statistics of the perturbation field
         virtual void calcStats() = 0;
 
-        //- get perturbation field at time
-        List<vector> getPerturbationsAtTime(scalar t) const;
+        //- get perturbation field at time, with specified rotation
+        // TODO: make template<class Type>
+        Field<vector> getPerturbationsAtTime
+        (
+            scalar t,
+            scalar ang = 0
+        );
+
+    // Public Getter Functions
 
 };
 

@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
             ts.calcStats();
 
             // test interpolation between inflow planes
-            vectorList U;
+            Field<vector> U;
             U = ts.getPerturbationsAtTime(-1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
             U = ts.getPerturbationsAtTime(0); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
             U = ts.getPerturbationsAtTime(1); Info<< "U = [ " << U[0] << " " << U[1] << " ... ]" << endl;
