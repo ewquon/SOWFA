@@ -176,6 +176,12 @@ private:
         // TODO: handle temperature perturbations
         //perturbations temperatureFluctuations_;
 
+        //- For some reason the solver creates copies of this class at each
+        //  solver iteration (e.g., with constructor #6: "Construct as copy
+        //  setting internal field reference"). For the copies, the destructor
+        //  should not delete the perturbations_ object.
+        bool isACopy_;
+
 
 public:
 
@@ -253,20 +259,19 @@ public:
 
         // Access
 
-	    //- Returns true if this patch fixes a value.  This is used for
-	    //  setting a reference value for a Poisson solve (pressure),
-	    //  and for determining if adjustPhi affects the flux here.
-	    virtual bool fixesValue() const
+            //- Returns true if this patch fixes a value.  This is used for
+            //  setting a reference value for a Poisson solve (pressure),
+            //  and for determining if adjustPhi affects the flux here.
+            virtual bool fixesValue() const
             {
-	        return fixesValue_;
-	    }
+                return fixesValue_;
+            }
 
             //- Return startSampledValues
             const Field<Type> startSampledValues()
             {
                 return startSampledValues_;
             }
-
 
         // Mapping functions
 

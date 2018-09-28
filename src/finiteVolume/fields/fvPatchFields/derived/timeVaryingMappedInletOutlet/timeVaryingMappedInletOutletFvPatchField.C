@@ -57,7 +57,9 @@ timeVaryingMappedInletOutletFvPatchField
     endSampleTime_(-1),
     endSampledValues_(0),
     endAverage_(pTraits<Type>::zero),
-    offset_()
+    offset_(),
+    perturbations_(NULL),
+    isACopy_(false)
 {
     this->refValue() = pTraits<Type>::zero;
     this->refGrad() = pTraits<Type>::zero;
@@ -96,13 +98,19 @@ timeVaryingMappedInletOutletFvPatchField
         ptf.offset_.valid()
       ? ptf.offset_().clone().ptr()
       : NULL
-    )
+    ),
+    perturbations_(ptf.perturbations_),
+    isACopy_(true)
 {
+// DEBUG
+/*
     if(addPerturbations_)
     {
-        // TODO: runtime select perturbations type; turbsim hard-coded for now
-        perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
+        Pout<< "CONSTRUCTOR 2: Mapping to existing turbsimBTS instance for "
+            << this->patch().name()
+            << endl;
     }
+*/
 }
 
 // #3
@@ -138,7 +146,8 @@ timeVaryingMappedInletOutletFvPatchField
     endSampleTime_(-1),
     endSampledValues_(0),
     endAverage_(pTraits<Type>::zero),
-    offset_(DataEntry<Type>::New("offset", dict))
+    offset_(DataEntry<Type>::New("offset", dict)),
+    isACopy_(false)
 {
     if
     (
@@ -186,6 +195,11 @@ timeVaryingMappedInletOutletFvPatchField
     if(addPerturbations_)
     {
         // TODO: runtime select perturbations type; turbsim hard-coded for now
+        /*
+        Pout<< "CONSTRUCTOR 3: Creating turbsimBTS instance for "
+            << this->patch().name()
+            << endl;
+        */
         perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
     }
 }
@@ -219,13 +233,19 @@ timeVaryingMappedInletOutletFvPatchField
         ptf.offset_.valid()
       ? ptf.offset_().clone().ptr()
       : NULL
-    )
+    ),
+    perturbations_(ptf.perturbations_),
+    isACopy_(true)
 {
+// DEBUG
+/*
     if(addPerturbations_)
     {
-        // TODO: runtime select perturbations type; turbsim hard-coded for now
-        perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
+        Pout<< "CONSTRUCTOR 5: Mapping to existing turbsimBTS instance for "
+            << this->patch().name()
+            << endl;
     }
+*/
 }
 
 // #6
@@ -258,13 +278,19 @@ timeVaryingMappedInletOutletFvPatchField
         ptf.offset_.valid()
       ? ptf.offset_().clone().ptr()
       : NULL
-    )
+    ),
+    perturbations_(ptf.perturbations_),
+    isACopy_(true)
 {
+// DEBUG
+/*
     if(addPerturbations_)
     {
-        // TODO: runtime select perturbations type; turbsim hard-coded for now
-        perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
+        Pout<< "CONSTRUCTOR 6: Mapping to existing turbsimBTS instance for "
+            << this->patch().name()
+            << endl;
     }
+*/
 }
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -272,8 +298,11 @@ timeVaryingMappedInletOutletFvPatchField
 template <class Type>
 timeVaryingMappedInletOutletFvPatchField<Type>::~timeVaryingMappedInletOutletFvPatchField()
 {
-    if(addPerturbations_)
+    if(addPerturbations_ && !isACopy_)
     {
+        // DEBUG
+        Pout<< "Deleting turbsimBTS instance for " << this->patch().name()
+            << endl;
         delete perturbations_;
     }
 }
