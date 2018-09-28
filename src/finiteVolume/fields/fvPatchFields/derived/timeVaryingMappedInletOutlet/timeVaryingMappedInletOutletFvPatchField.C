@@ -101,7 +101,7 @@ timeVaryingMappedInletOutletFvPatchField
     if(addPerturbations_)
     {
         // TODO: runtime select perturbations type; turbsim hard-coded for now
-        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+        perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
     }
 }
 
@@ -186,7 +186,7 @@ timeVaryingMappedInletOutletFvPatchField
     if(addPerturbations_)
     {
         // TODO: runtime select perturbations type; turbsim hard-coded for now
-        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+        perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
     }
 }
 
@@ -224,7 +224,7 @@ timeVaryingMappedInletOutletFvPatchField
     if(addPerturbations_)
     {
         // TODO: runtime select perturbations type; turbsim hard-coded for now
-        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+        perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
     }
 }
 
@@ -263,7 +263,7 @@ timeVaryingMappedInletOutletFvPatchField
     if(addPerturbations_)
     {
         // TODO: runtime select perturbations type; turbsim hard-coded for now
-        synthTurb_ = new syntheticTurbulence::turbsimBTS(this->patch());
+        perturbations_ = new syntheticTurbulence::turbsimBTS(this->patch());
     }
 }
 
@@ -274,7 +274,7 @@ timeVaryingMappedInletOutletFvPatchField<Type>::~timeVaryingMappedInletOutletFvP
 {
     if(addPerturbations_)
     {
-        delete synthTurb_;
+        delete perturbations_;
     }
 }
 

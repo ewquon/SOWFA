@@ -170,8 +170,9 @@ private:
         autoPtr<DataEntry<Type> > offset_;
 
         //- synthetic turbulence fields
+        // TODO: use autoPtr<>
         // TODO: make this runtime selectable, check consistency with Type
-        syntheticTurbulence::turbsimBTS *synthTurb_;
+        syntheticTurbulence::turbsimBTS *perturbations_;
         // TODO: handle temperature perturbations
         //perturbations temperatureFluctuations_;
 
