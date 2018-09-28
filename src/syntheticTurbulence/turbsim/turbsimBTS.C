@@ -274,42 +274,50 @@ void turbsimBTS::calcStats()
     // calculate statistics
     Info<< "Calculating statistics...";
     Foam::flush(Info);
-    float ustd =    0, vstd =    0, wstd =    0;
-    float umin =  9e9, vmin =  9e9, wmin =  9e9;
-    float umax = -9e9, vmax = -9e9, wmax = -9e9;
+    minU =  9e9;
+    minV =  9e9;
+    minW =  9e9;
+    maxU = -9e9;
+    maxV = -9e9;
+    maxW = -9e9;
+    stdU = 0;
+    stdV = 0;
+    stdW = 0;
     vector Uvec;
     forAll(perturb[0],faceI)
     {
+        // time average
         float uu_sum=0, vv_sum=0, ww_sum=0;
         for(int itime=0; itime<Nt; ++itime)
         {
             Uvec = perturb[itime][faceI];
-            // note: U,V,W are fluctuations
-            if(Uvec.x() < umin) umin = Uvec.x();
-            if(Uvec.x() > umax) umax = Uvec.x();
-            if(Uvec.y() < vmin) vmin = Uvec.y();
-            if(Uvec.y() > vmax) vmax = Uvec.y();
-            if(Uvec.z() < wmin) wmin = Uvec.z();
-            if(Uvec.z() > wmax) wmax = Uvec.z();
+            // note: Uvec[:] are fluctuations
+            if(Uvec.x() < minU) minU = Uvec.x();
+            if(Uvec.x() > maxU) maxU = Uvec.x();
+            if(Uvec.y() < minV) minV = Uvec.y();
+            if(Uvec.y() > maxV) maxV = Uvec.y();
+            if(Uvec.z() < minW) minW = Uvec.z();
+            if(Uvec.z() > maxW) maxW = Uvec.z();
             uu_sum += Uvec.x() * Uvec.x();
             vv_sum += Uvec.y() * Uvec.y();
             ww_sum += Uvec.z() * Uvec.z();
         }
-        ustd += Foam::sqrt(uu_sum/Nt);
-        vstd += Foam::sqrt(vv_sum/Nt);
-        wstd += Foam::sqrt(ww_sum/Nt);
+        stdU += Foam::sqrt(uu_sum/Nt);
+        stdV += Foam::sqrt(vv_sum/Nt);
+        stdW += Foam::sqrt(ww_sum/Nt);
     }
-    ustd = ustd / (Ny*Nz);
-    vstd = vstd / (Ny*Nz);
-    wstd = wstd / (Ny*Nz);
+    // spatial average over inflow plane
+    stdU = stdU / (Ny*Nz);
+    stdV = stdV / (Ny*Nz);
+    stdW = stdW / (Ny*Nz);
     Info<< " done!" << endl;
 
-    Info<< "U min,max,stdev = "
-        << umin << " " << umax << " " << ustd << endl;
-    Info<< "V min,max,stdev = "
-        << vmin << " " << vmax << " " << vstd << endl;
-    Info<< "W min,max,stdev = "
-        << wmin << " " << wmax << " " << wstd << endl;
+    Info<< "  U min,max,stdev = "
+        << minU << " " << maxU << " " << stdU << endl;
+    Info<< "  V min,max,stdev = "
+        << minV << " " << maxV << " " << stdV << endl;
+    Info<< "  W min,max,stdev = "
+        << minW << " " << maxW << " " << stdW << endl;
 }
 
 

@@ -101,7 +101,10 @@ perturbations::perturbations
     Nt(0),
     dt(0.0),
     period(-1.0),
-    periodic(false)
+    periodic(false),
+    minU(0), minV(0), minW(0),
+    maxU(0), maxV(0), maxW(0),
+    stdU(0), stdV(0), stdW(0)
 
 {}
 

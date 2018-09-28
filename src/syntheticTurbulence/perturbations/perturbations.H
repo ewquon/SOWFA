@@ -95,6 +95,11 @@ protected:
         scalar period;
         bool periodic;
 
+        //- Turbulence statistics
+        scalar minU, minV, minW;
+        scalar maxU, maxV, maxW;
+        scalar stdU, stdV, stdW;
+
     //- Protected field variables
 
         //- Time vector
