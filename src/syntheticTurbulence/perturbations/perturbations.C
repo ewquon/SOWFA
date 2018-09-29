@@ -60,13 +60,14 @@ perturbations::perturbations
             "turbsim"
         )
     ),
-    perturbPatches_
+
+    correctVariance_
     (
-        perturbDict_.lookup("perturbedPatches")
-    ),
-    perturbedLayerTop_
-    (
-        readScalar(perturbDict_.lookup("perturbedLayerTop"))
+        perturbDict_.lookupOrDefault<bool>
+        (
+            "correctVariance",
+            false
+        )
     ),
     perturbedLayerCutoff_
     (
@@ -93,7 +94,20 @@ perturbations::perturbations
         )
     ),
 
-    // Initialize field variables (to be read in by derived class)
+    perturbedLayerTop_
+    (
+        readScalar(perturbDict_.lookup("perturbedLayerTop"))
+    ),
+    perturbationVariance_
+    (
+        perturbDict_.lookupOrDefault<scalar>
+        (
+            "perturbationVariance",
+            0.0 // not used if correctVariances is false
+        )
+    ),
+
+    // Initialize field variables (to be set by derived class)
     Ny(0),
     Nz(0),
     dy(0.0),
@@ -121,6 +135,11 @@ inline scalar perturbations::tanhScaling(scalar z) const
 void perturbations::setScaling()
 {
     scaling.resize(Ny*Nz);
+    scalar scalingFactor = 1.0;
+    if(correctVariance_)
+    {
+        // TODO: calculate scalingFactor if correctVariances is true
+    }
     if(perturbedLayerCutoff_ == "simple")
     {
         Info<< "Setup scaling with simple cutoff" << endl;
@@ -128,7 +147,7 @@ void perturbations::setScaling()
         {
             if(points[I].z() < perturbedLayerTop_)
             {
-                scaling[I] = 1.0; //vector::one;
+                scaling[I] = scalingFactor; //vector::one;
             }     
             else  
             {     
@@ -142,7 +161,7 @@ void perturbations::setScaling()
         tanhParam = -Foam::atanh(2*transitionEdgeScaling_ - 1);
         forAll(scaling, I)
         {
-            scaling[I] = tanhScaling(points[I].z());
+            scaling[I] = scalingFactor * tanhScaling(points[I].z());
         }
     }
     else
@@ -227,6 +246,12 @@ Field<vector> perturbations::getPerturbationsAtTime
             U = perturb[i-1]
                 + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
         }
+    }
+
+    // enforce cutoff
+    forAll(U, faceI)
+    {
+        U[faceI] *= scaling[faceI];
     }
 
     // rotate to align streamwise components

@@ -71,10 +71,14 @@ protected:
         //List<word> perturbPatches_;
 
         //- Scaling properties
-        scalar perturbedLayerTop_;
+        bool correctVariance_;
         word perturbedLayerCutoff_;
         scalar transitionThickness_;
         scalar transitionEdgeScaling_;
+
+        //- Variable scaling properties
+        scalar perturbedLayerTop_;
+        scalar perturbationVariance_;
 
     //- Protected field parameters
 
@@ -173,6 +177,11 @@ public:
     virtual ~perturbations()
     {}
 
+    // Access
+
+        word perturbType() { return perturbType_; }
+        scalar perturbedLayerTop() { return perturbedLayerTop_; }
+
     // Public Member Functions
 
         //- print out the scaling function (for debug)
@@ -188,8 +197,6 @@ public:
             scalar t,
             scalar ang = 0
         );
-
-    // Public Getter Functions
 
 };
 
