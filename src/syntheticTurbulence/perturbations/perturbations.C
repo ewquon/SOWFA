@@ -175,11 +175,6 @@ void perturbations::setScaling()
 
 void perturbations::setupMapper()
 {
-    Info<< "Setting up planar interpolation between the "
-        << perturbType_ << " perturbation field "
-        << "and patch " << patch_.name()
-        << endl;
-
     // set up inflow points field (i.e., the "samplePoints")
     pointField inflowPoints(points);
 
@@ -205,12 +200,13 @@ Field<vector> perturbations::getPerturbationsAtTime
     scalar ang
 )
 {
+//    Pout<< "Requested perturbations at time " << t
+//        << " with rotation angle "
+//        << 180.0/Foam::constant::mathematical::pi * ang << " deg"
+//        << endl;
+
     if(mapperPtr_.empty()) setupMapper();
 
-    Pout<< "Requested perturbations at time " << t
-        << " with rotation angle "
-        << 180.0/Foam::constant::mathematical::pi * ang << " deg"
-        << endl;
     List<vector> U;
     if( t < times[0] )
     {
@@ -226,8 +222,9 @@ Field<vector> perturbations::getPerturbationsAtTime
     {
         if(periodic)
         {
+            Info<< "t=" << t;
             t -= int(t/period)*period;
-            Info<< "  mapped to t = " << t;
+            Info<< " mapped to t=" << t;
         }
         label i;
         for(i=1; i<times.size(); ++i)
@@ -236,13 +233,13 @@ Field<vector> perturbations::getPerturbationsAtTime
         }
         if(i<times.size())
         {
-            Info<< "  between " << times[i-1] << " and " << times[i] << endl;
+            Info<< " between " << times[i-1] << " and " << times[i] << endl;
             U = perturb[i-1]
                 + (perturb[i]-perturb[i-1])/(times[i]-times[i-1]) * (t-times[i-1]);
         }
         else
         {
-            Info<< "  between " << times[i-1] << " and " << period << endl;
+            Info<< " between " << times[i-1] << " and " << period << endl;
             U = perturb[i-1]
                 + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
         }
@@ -255,7 +252,7 @@ Field<vector> perturbations::getPerturbationsAtTime
     }
 
     // rotate to align streamwise components
-    Field<vector> rotatedU(U.size());
+    Field<vector> rotatedU(U.size(),vector::zero);
     forAll(U, faceI)
     {
         rotatedU[faceI].x() = U[faceI].x()*Foam::cos(ang) - U[faceI].y()*Foam::sin(ang);

@@ -179,7 +179,8 @@ private:
         //- For some reason the solver creates copies of this class at each
         //  solver iteration (e.g., with constructor #6: "Construct as copy
         //  setting internal field reference"). For the copies, the destructor
-        //  should not delete the perturbations_ object.
+        //  should NOT delete the perturbations_ object, so this flag dictates
+        //  the destructor behavior. 
         bool isACopy_;
 
 

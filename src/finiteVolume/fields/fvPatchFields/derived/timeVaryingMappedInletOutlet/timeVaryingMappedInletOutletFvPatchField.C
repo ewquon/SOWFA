@@ -713,6 +713,76 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::updateCoeffs()
             << " avg:" << gAverage(*this) << endl;
     }
 
+    if (addPerturbations_)
+    {
+        scalar zmax = perturbations_->perturbedLayerTop();
+        Info<< "Adding " << perturbations_->perturbType() << " perturbations"
+            << " to " << word(pTraits<Type>::typeName)
+            << " field " << fieldTableName_
+            << " on patch " << this->patch().name()
+            << " up to z = " << zmax
+            << endl;
+
+        //Info<< *this << endl; // print out all fvPatchField properties (says inletValue is nonuniform List<vector>)
+        //Info<< this->patch() << endl; // print out all fvPatch properties -- does NOT work, no string repr
+        //Info<< this->refValue().typeName << endl; // returns "Field"
+        //Info<< this->refValue() << endl; // print out inlet field values
+        //Info<< this->refValue().operator[](0) << endl; // causes a segfault
+        //Info<< this->refValue()[0] << endl; // causes a segfault
+
+        // Note: for some reason this->refValue()[faceI] gives SphericalTensor
+        //   instead of a vector. As a result, .x(), .y(), and .z() member
+        //   functions don't exist and vectorFields can't be directly added
+        //   together. 
+        // Related issue? https://www.cfd-online.com/Forums/openfoam-programming-development/129172-refvalue-facei.html
+
+        // Get mean wind direction within the perturbed layer
+        Field<scalar> Uref = this->refValue().component(0);
+        Field<scalar> Vref = this->refValue().component(1);
+        Field<scalar> Wref = this->refValue().component(2);
+        DynamicList<scalar> Uarray;
+        DynamicList<scalar> Varray;
+        forAll(this->patch(), faceI)
+        {
+            //Info<< this->patch().Cf()[faceI] << " " << this->refValue()[faceI] << endl;
+            if (this->patch().Cf()[faceI].z() <= zmax)
+            {
+                Uarray.append(Uref[faceI]);
+                Varray.append(Vref[faceI]);
+            }
+        }
+        scalar Uavg = gAverage(Uarray);
+        scalar Vavg = gAverage(Varray);
+        scalar ang = Foam::atan2(Vavg,Uavg);
+        Info<< this->patch().name()
+            << " mean U, V, flow angle : "
+            << Uavg << " "
+            << Vavg << " "
+            << 180.0/Foam::constant::mathematical::pi * ang << " deg"
+            << endl;
+        
+        // Map perturbation field
+        // TODO: runtime select perturbations type; turbsim hard-coded for now
+        //Field<Type> perts = perturbations_->getPerturbationsAtTime
+        Field<vector> perts = perturbations_->getPerturbationsAtTime
+        (
+            this->db().time().value(),
+            ang
+        );
+
+        // Superimpose perturbations onto reference field (boundaryData)
+        //this->refValue() += perts; // fails because refValue() is of Type==Foam::SphericalTensor??
+        forAll(this->patch(), faceI)
+        {
+            Uref[faceI] += perts[faceI].x();
+            Vref[faceI] += perts[faceI].y();
+            Wref[faceI] += perts[faceI].z();
+        }
+        this->refValue().replace(0, Uref);
+        this->refValue().replace(1, Vref);
+        this->refValue().replace(2, Wref);
+    }
+
     
 //
 /*
