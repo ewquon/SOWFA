@@ -764,7 +764,7 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::updateCoeffs()
         // Map perturbation field
         // TODO: runtime select perturbations type; turbsim hard-coded for now
         //Field<Type> perts = perturbations_->getPerturbationsAtTime
-        Field<vector> perts = perturbations_->getPerturbationsAtTime
+        const Field<vector>& perts = perturbations_->getPerturbationsAtTime
         (
             this->db().time().value(),
             ang

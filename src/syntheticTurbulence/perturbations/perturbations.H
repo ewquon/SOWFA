@@ -37,6 +37,7 @@ Description
 #define perturbations_H
 
 #include "fvCFD.H"
+#include "pointToPointPlanarInterpolation.H"
 
 //#include "syntheticTurbulence.H" // is this needed?
 
@@ -134,6 +135,10 @@ private:
         //- Planar interpolation
         autoPtr<pointToPointPlanarInterpolation> mapperPtr_;
 
+        //- Saved field (so we don't repeat the same interpolation multiple times)
+        scalar tlast;
+        Field<vector> Ulast;
+
     //- Private functions
     
         //- Scaling functions
@@ -192,7 +197,7 @@ public:
 
         //- get perturbation field at time, with specified rotation
         // TODO: make template<class Type>
-        Field<vector> getPerturbationsAtTime
+        const Field<vector>& getPerturbationsAtTime
         (
             scalar t,
             scalar ang = 0

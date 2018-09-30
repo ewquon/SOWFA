@@ -120,7 +120,9 @@ perturbations::perturbations
     maxU(0), maxV(0), maxW(0),
     stdU(0), stdV(0), stdW(0),
 
-    mapperPtr_(NULL)
+    // Interpolation vars
+    mapperPtr_(NULL),
+    tlast(-1)
 
 {
 }
@@ -194,7 +196,7 @@ void perturbations::setupMapper()
     );
 }
 
-Field<vector> perturbations::getPerturbationsAtTime
+const Field<vector>& perturbations::getPerturbationsAtTime
 (
     scalar t,
     scalar ang
@@ -226,22 +228,31 @@ Field<vector> perturbations::getPerturbationsAtTime
             t -= int(t/period)*period;
             Info<< " mapped to t=" << t;
         }
-        label i;
-        for(i=1; i<times.size(); ++i)
+        if(t==tlast)
         {
-            if(times[i] > t) break;
-        }
-        if(i<times.size())
-        {
-            Info<< " between " << times[i-1] << " and " << times[i] << endl;
-            U = perturb[i-1]
-                + (perturb[i]-perturb[i-1])/(times[i]-times[i-1]) * (t-times[i-1]);
+            Info<< " (saved)" << endl;
+            return Ulast;
         }
         else
         {
-            Info<< " between " << times[i-1] << " and " << period << endl;
-            U = perturb[i-1]
-                + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
+            tlast = t;
+            label i;
+            for(i=1; i<times.size(); ++i)
+            {
+                if(times[i] > t) break;
+            }
+            if(i<times.size())
+            {
+                Info<< " between " << times[i-1] << " and " << times[i] << endl;
+                U = perturb[i-1]
+                    + (perturb[i]-perturb[i-1])/(times[i]-times[i-1]) * (t-times[i-1]);
+            }
+            else
+            {
+                Info<< " between " << times[i-1] << " and " << period << endl;
+                U = perturb[i-1]
+                    + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
+            }
         }
     }
 
@@ -274,7 +285,9 @@ Field<vector> perturbations::getPerturbationsAtTime
             << exit(FatalError);
     }
 
-    return mapperPtr_().interpolate(rotatedU);
+    Ulast = mapperPtr_().interpolate(rotatedU);
+
+    return Ulast;
 }
 
 void perturbations::printScaling()
