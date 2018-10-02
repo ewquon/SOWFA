@@ -78,7 +78,7 @@ protected:
         scalar transitionEdgeScaling_;
 
         //- Variable scaling properties
-        scalar perturbedLayerTop_;
+        scalar perturbedLayerHeight_;
         scalar perturbationVariance_;
 
     //- Protected field parameters
@@ -185,7 +185,7 @@ public:
     // Access
 
         word perturbType() { return perturbType_; }
-        scalar perturbedLayerTop() { return perturbedLayerTop_; }
+        scalar perturbedLayerHeight() { return perturbedLayerHeight_; }
 
     // Public Member Functions
 

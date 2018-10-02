@@ -94,9 +94,9 @@ perturbations::perturbations
         )
     ),
 
-    perturbedLayerTop_
+    perturbedLayerHeight_
     (
-        readScalar(perturbDict_.lookup("perturbedLayerTop"))
+        readScalar(perturbDict_.lookup("perturbedLayerHeight"))
     ),
     perturbationVariance_
     (
@@ -131,7 +131,7 @@ perturbations::perturbations
 
 inline scalar perturbations::tanhScaling(scalar z) const
 {
-    return 0.5 * Foam::tanh( 2 * tanhParam * (z-perturbedLayerTop_) / transitionThickness_ ) + 0.5;
+    return 0.5 * Foam::tanh( 2 * tanhParam * (z-perturbedLayerHeight_) / transitionThickness_ ) + 0.5;
 }
 
 void perturbations::setScaling()
@@ -147,7 +147,7 @@ void perturbations::setScaling()
         Info<< "Setup scaling with simple cutoff" << endl;
         forAll(scaling, I)
         {
-            if(points[I].z() < perturbedLayerTop_)
+            if(points[I].z() < perturbedLayerHeight_)
             {
                 scaling[I] = scalingFactor; //vector::one;
             }     
@@ -224,9 +224,9 @@ const Field<vector>& perturbations::getPerturbationsAtTime
     {
         if(periodic)
         {
-            Info<< "t=" << t;
+            Info<< "t= " << t;
             t -= int(t/period)*period;
-            Info<< " mapped to t=" << t;
+            Info<< " mapped to t= " << t;
         }
         if(t==tlast)
         {
@@ -297,19 +297,19 @@ void perturbations::printScaling()
     zval = points[0].z();
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
     Info<< " ...";
-    zval = perturbedLayerTop_ - 2.0*transitionThickness_;
+    zval = perturbedLayerHeight_ - 2.0*transitionThickness_;
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerTop_ - 1.0*transitionThickness_;
+    zval = perturbedLayerHeight_ - 1.0*transitionThickness_;
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerTop_ - 0.5*transitionThickness_;
+    zval = perturbedLayerHeight_ - 0.5*transitionThickness_;
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerTop_;
+    zval = perturbedLayerHeight_;
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerTop_ + 0.5*transitionThickness_;
+    zval = perturbedLayerHeight_ + 0.5*transitionThickness_;
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerTop_ + 1.0*transitionThickness_;
+    zval = perturbedLayerHeight_ + 1.0*transitionThickness_;
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerTop_ + 2.0*transitionThickness_;
+    zval = perturbedLayerHeight_ + 2.0*transitionThickness_;
     Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
     Info<< " ...";
     zval = points[points.size()-1].z();

@@ -715,7 +715,7 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::updateCoeffs()
 
     if (addPerturbations_)
     {
-        scalar zmax = perturbations_->perturbedLayerTop();
+        scalar zmax = perturbations_->perturbedLayerHeight();
         Info<< "Adding " << perturbations_->perturbType() << " perturbations"
             << " to " << word(pTraits<Type>::typeName)
             << " field " << fieldTableName_
