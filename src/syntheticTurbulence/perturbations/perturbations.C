@@ -120,14 +120,74 @@ perturbations::perturbations
     maxU(0), maxV(0), maxW(0),
     stdU(0), stdV(0), stdW(0),
 
+    // Diagnostics
+    haveProbe(false),
+    probeID(-1),
+
     // Interpolation vars
     mapperPtr_(NULL),
     tlast(-1)
 
 {
+    setupProbe();
 }
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
+
+void perturbations::setupProbe()
+{
+    // find center of patch (to find probe location), assuming patch is planar
+    const boundBox& globalBb = patch_.boundaryMesh().mesh().bounds();
+    point domainCenter = 0.5*(globalBb.min() + globalBb.max());
+    domainCenter.z() = 100.0; // hard-coded probe height
+    point patchCenter(vector::zero);
+    if(patch_.size() > 0)
+    {
+        vector norm = patch_.Sf()[0] / patch_.magSf()[0];
+        vector patchDist = ((domainCenter - patch_.Cf()[0]) & norm) * norm;
+        patchCenter = domainCenter - patchDist;
+
+        //Pout<< "   patch center: " << patchCenter
+        //    << " (" << patch_.name() << ")"
+        //    << endl;
+    }
+
+    // find probe location
+    scalar minDist2(Foam::VGREAT);
+    List<scalar> r2(patch_.size());
+    if(patch_.size() > 0)
+    {
+        vector r;
+        forAll(patch_.Cf(), faceI)
+        {
+            r = patch_.Cf()[faceI] - patchCenter;
+            r2[faceI] = r & r;
+            if(r2[faceI] < minDist2)
+            {
+                minDist2 = r2[faceI];
+            }
+        }
+        //Pout<< "   minDist2: " << minDist2
+        //    << " (" << patch_.name() << ")"
+        //    << endl;
+    }
+
+    // find proc that contains the center point
+    reduce(minDist2, minOp<scalar>());
+    //Info<< "  minDist2 = " << minDist2 << endl;
+    forAll(patch_.Cf(), faceI)
+    {
+        if(r2[faceI] == minDist2)
+        {
+            haveProbe = true;
+            probeID = faceI;
+            Pout<< "Probe on " << patch_.name()
+                << " patch at " << patch_.Cf()[probeID] << endl;
+            break;
+        }
+    }
+}
+
 
 inline scalar perturbations::tanhScaling(scalar z) const
 {
@@ -194,6 +254,7 @@ void perturbations::setupMapper()
             false // nearestOnly flag
         )
     );
+
 }
 
 const Field<vector>& perturbations::getPerturbationsAtTime
@@ -286,6 +347,11 @@ const Field<vector>& perturbations::getPerturbationsAtTime
     }
 
     Ulast = mapperPtr_().interpolate(rotatedU);
+
+    if(haveProbe)
+    {
+        Pout<< patch_.name() << " boundary probe : " << Ulast[probeID] << endl;
+    }
 
     return Ulast;
 }

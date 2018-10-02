@@ -128,6 +128,10 @@ protected:
 
 private:
     //- Private variables
+
+        //- Probe location (for diagnostics)
+        bool haveProbe;
+        label probeID;
     
         //- Scaling parameters
         scalar tanhParam; // "k", where s(z) = 0.5*tanh(k*(z-ztop)/(width/2)) + 0.5
@@ -140,12 +144,15 @@ private:
         Field<vector> Ulast;
 
     //- Private functions
-    
-        //- Scaling functions
-        inline scalar tanhScaling(scalar z) const;
 
+        //- Diagnostics
+        void setupProbe();
+    
         //- Planar interpolation
         void setupMapper();
+
+        //- Scaling functions
+        inline scalar tanhScaling(scalar z) const;
 
 public:
     //- Runtime type information
