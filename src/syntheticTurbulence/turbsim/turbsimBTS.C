@@ -41,6 +41,7 @@ turbsimBTS::turbsimBTS
     fileName fpath = runTime_.time().constant() / "boundaryData" / fieldName+".bts";
     read(fpath);
     setScaling();
+    printScaling();
 }
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //

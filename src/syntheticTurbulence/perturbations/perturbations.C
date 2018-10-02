@@ -358,29 +358,32 @@ const Field<vector>& perturbations::getPerturbationsAtTime
 
 void perturbations::printScaling()
 {
-    scalar zval;
-    Info<< "Scaling function: [";
-    zval = points[0].z();
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    Info<< " ...";
-    zval = perturbedLayerHeight_ - 2.0*transitionThickness_;
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerHeight_ - 1.0*transitionThickness_;
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerHeight_ - 0.5*transitionThickness_;
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerHeight_;
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerHeight_ + 0.5*transitionThickness_;
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerHeight_ + 1.0*transitionThickness_;
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    zval = perturbedLayerHeight_ + 2.0*transitionThickness_;
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    Info<< " ...";
-    zval = points[points.size()-1].z();
-    Info<< " (" << zval << ", " << tanhScaling(zval) << ")";
-    Info<< "]" << endl;
+    if(patch_.size() > 0)
+    {
+        scalar zval;
+        Pout<< "Scaling function: [";
+        zval = points[0].z();
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        Pout<< " ...";
+        zval = perturbedLayerHeight_ - 2.0*transitionThickness_;
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        zval = perturbedLayerHeight_ - 1.0*transitionThickness_;
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        zval = perturbedLayerHeight_ - 0.5*transitionThickness_;
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        zval = perturbedLayerHeight_;
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        zval = perturbedLayerHeight_ + 0.5*transitionThickness_;
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        zval = perturbedLayerHeight_ + 1.0*transitionThickness_;
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        zval = perturbedLayerHeight_ + 2.0*transitionThickness_;
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        Pout<< " ...";
+        zval = points[points.size()-1].z();
+        Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
+        Pout<< "]" << endl;
+    }
 }
 
 
