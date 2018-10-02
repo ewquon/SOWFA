@@ -40,6 +40,11 @@ turbsimBTS::turbsimBTS
     Pout<< "Creating turbsimBTS object for " << fieldName << endl;
     fileName fpath = runTime_.time().constant() / "boundaryData" / fieldName+".bts";
     read(fpath);
+
+    // starting orientation
+    vector norm0 = vector(-1,0,0); // note: normal points outward
+    reorientInflowPlane(norm0);
+
     setScaling();
     printScaling();
 }

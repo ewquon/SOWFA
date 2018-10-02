@@ -123,6 +123,10 @@ protected:
 
     //- Protected functions
 
+        //- Reorient inflow plane to correctly map between synthetic inflow and boundary patches
+        //  using pointToPointPlanarInterpolation. This must be called BEFORE the mapper is set up.
+        void reorientInflowPlane(vector&);
+
         //- Set scaling factors
         void setScaling();
 

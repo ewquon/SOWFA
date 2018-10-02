@@ -235,8 +235,51 @@ void perturbations::setScaling()
     }
 }
 
+void perturbations::reorientInflowPlane
+(
+    vector& norm0
+)
+{
+    if(patch_.size() > 0)
+    {
+        vector norm = patch_.Sf()[0] / patch_.magSf()[0];
+        if(norm != norm0)
+        {
+            vector cross = norm ^ norm0;
+            scalar ang = Foam::asin(cross.z());
+            Pout<< "Reorienting inflow plane from " << norm0 << " to " << norm
+                << " for patch " << patch_.name()
+                << " (rotate by "
+                << 180.0/Foam::constant::mathematical::pi * ang << " deg)"
+                << endl;
+
+            // Rotate...
+            List<vector> rotatedPoints(points.size(), vector::zero);
+            forAll(points, ptI)
+            {
+                rotatedPoints[ptI].x() = points[ptI].x()*Foam::cos(ang) - points[ptI].y()*Foam::sin(ang);
+                rotatedPoints[ptI].y() = points[ptI].x()*Foam::sin(ang) + points[ptI].y()*Foam::cos(ang);
+                rotatedPoints[ptI].z() = points[ptI].z();
+            }
+            // ...and mirror (poor-man's periodicity) -- acknowledged that fields will be in
+            // inconsistent in terms of coherence at the domain corners... but turbsim isn't
+            // perfect anyway (not divergence free)
+            // TODO: need to come up with a better (consistent) approach for Gabor KS
+            points = cmptMag(rotatedPoints); // i.e., absolute value
+        }
+    }
+}
+
 void perturbations::setupMapper()
 {
+    if(patch_.size() > 0)
+    {
+        Pout<< "Setting up patch mapper for "
+            << patch_.size() << " points on patch "
+            << patch_.name()
+            << endl;
+    }
+
     // set up inflow points field (i.e., the "samplePoints")
     pointField inflowPoints(points);
 
