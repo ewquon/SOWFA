@@ -47,6 +47,8 @@ turbsimBTS::turbsimBTS
 
     setScaling();
     printScaling();
+
+    calcStats();
 }
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
@@ -318,11 +320,11 @@ void turbsimBTS::calcStats()
     stdW = stdW / (Ny*Nz);
     Info<< " done!" << endl;
 
-    Info<< "  U min,max,stdev = "
+    Info<< "fluctuating u min,max,stdev : "
         << minU << " " << maxU << " " << stdU << endl;
-    Info<< "  V min,max,stdev = "
+    Info<< "fluctuating v min,max,stdev : "
         << minV << " " << maxV << " " << stdV << endl;
-    Info<< "  W min,max,stdev = "
+    Info<< "fluctuating w min,max,stdev : "
         << minW << " " << maxW << " " << stdW << endl;
 }
 
