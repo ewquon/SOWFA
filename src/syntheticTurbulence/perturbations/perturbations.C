@@ -139,6 +139,9 @@ perturbations::perturbations
     haveProbe(false),
     probeID(-1),
 
+    // Tanh scaling parameter
+    tanhParam(-Foam::atanh(2*transitionEdgeScaling_ - 1)),
+
     // Interpolation vars
     mapperPtr_(NULL),
     tlast(-1)
@@ -219,7 +222,19 @@ void perturbations::setupProbe()
 
 inline scalar perturbations::tanhScaling(scalar z) const
 {
-    return 0.5 * Foam::tanh( 2 * tanhParam * (z-perturbedLayerHeight_) / transitionThickness_ ) + 0.5;
+    return 0.5*Foam::tanh( 2 * tanhParam * (z-perturbedLayerHeight_) / transitionThickness_ ) + 0.5;
+}
+
+inline scalar perturbations::linearScaling(scalar z) const
+{
+    if(z > perturbedLayerHeight_)
+    {
+        return 0;
+    }
+    else
+    {
+        return (perturbedLayerHeight_ - z) / perturbedLayerHeight_;
+    }
 }
 
 void perturbations::setScaling()
@@ -248,10 +263,17 @@ void perturbations::setScaling()
     else if(perturbedLayerCutoff_ == "tanh")
     {
         Info<< "Updated scaling with tanh cutoff" << endl;
-        tanhParam = -Foam::atanh(2*transitionEdgeScaling_ - 1);
         forAll(scaling, I)
         {
             scaling[I] = scalingFactor * tanhScaling(points[I].z());
+        }
+    }
+    else if(perturbedLayerCutoff_ == "linear")
+    {
+        Info<< "Updated linear scaling" << endl;
+        forAll(scaling, I)
+        {
+            scaling[I] = scalingFactor * linearScaling(points[I].z());
         }
     }
     else

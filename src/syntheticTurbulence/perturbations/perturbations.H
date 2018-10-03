@@ -171,6 +171,7 @@ private:
 
         //- Scaling functions
         inline scalar tanhScaling(scalar) const;
+        inline scalar linearScaling(scalar) const;
 
 public:
     //- Runtime type information
