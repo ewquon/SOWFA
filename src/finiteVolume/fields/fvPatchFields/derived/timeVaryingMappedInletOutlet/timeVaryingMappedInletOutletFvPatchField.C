@@ -716,7 +716,7 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::updateCoeffs()
     if (addPerturbations_)
     {
         scalar zmax = perturbations_->perturbedLayerHeight();
-        Info<< "Adding " << perturbations_->perturbType() << " perturbations"
+        Info<< "updateCoeffs : adding " << perturbations_->perturbType() << " perturbations"
             << " to " << word(pTraits<Type>::typeName)
             << " field " << fieldTableName_
             << " on patch " << this->patch().name()
@@ -753,10 +753,10 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::updateCoeffs()
         scalar Uavg = gAverage(Uarray);
         scalar Vavg = gAverage(Varray);
         scalar ang = Foam::atan2(Vavg,Uavg);
-        Info<< this->patch().name()
+        Info<< "  " << this->patch().name()
             << " mean U, V, flow angle : "
-            << Uavg << " "
-            << Vavg << " "
+            << Uavg << " m/s, "
+            << Vavg << " m/s, "
             << 180.0/Foam::constant::mathematical::pi * ang << " deg"
             << endl;
         

@@ -387,7 +387,7 @@ void perturbations::updatePerturbationHeight
             perturbedLayerHeight_ = controlHeight[controlTime.size()-1];
         }
     }
-    Info<< "Perturbation height = " << perturbedLayerHeight_ << endl;
+    Info<< "  height = " << perturbedLayerHeight_ << " m" << endl;
 }
 
 const Field<vector>& perturbations::getPerturbationsAtTime
@@ -499,7 +499,7 @@ void perturbations::printScaling()
     if(patch_.size() > 0)
     {
         scalar zval;
-        Pout<< "Scaling function: [";
+        Pout<< "tanh scaling function: [";
         zval = points[0].z();
         Pout<< " (" << zval << ", " << tanhScaling(zval) << ")";
         Pout<< " ...";

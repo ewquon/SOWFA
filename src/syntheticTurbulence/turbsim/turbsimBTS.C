@@ -46,7 +46,7 @@ turbsimBTS::turbsimBTS
     reorientInflowPlane(norm0);
 
     setScaling();
-    printScaling();
+    //printScaling(); // tanh function
 
     calcStats();
 }
