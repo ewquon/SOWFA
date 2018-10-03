@@ -81,6 +81,10 @@ protected:
         scalar perturbedLayerHeight_;
         scalar perturbationVariance_;
 
+        List<List<scalar> > perturbationControlTable_;
+
+        //- TODO: Automatic update of scaling parameters
+        word perturbationHeightControl_;
     //- Protected field parameters
 
         //- Inflow plane dimensions
@@ -136,7 +140,7 @@ private:
         //- Probe location (for diagnostics)
         bool haveProbe;
         label probeID;
-    
+
         //- Scaling parameters
         scalar tanhParam; // "k", where s(z) = 0.5*tanh(k*(z-ztop)/(width/2)) + 0.5
 
@@ -147,7 +151,14 @@ private:
         scalar tlast;
         Field<vector> Ulast;
 
+        //- Perturbation controls
+        List<scalar> controlTime;
+        List<scalar> controlHeight;
+    
     //- Private functions
+
+        //- Reformat perturbationControlTable for ease of use
+        void setupControlTable();
 
         //- Diagnostics
         void setupProbe();
@@ -155,8 +166,11 @@ private:
         //- Planar interpolation
         void setupMapper();
 
+        //- Update perturbedLayerHeight from perturbationControlTable
+        void updatePerturbationHeight(scalar);
+
         //- Scaling functions
-        inline scalar tanhScaling(scalar z) const;
+        inline scalar tanhScaling(scalar) const;
 
 public:
     //- Runtime type information

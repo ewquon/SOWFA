@@ -720,7 +720,6 @@ void timeVaryingMappedInletOutletFvPatchField<Type>::updateCoeffs()
             << " to " << word(pTraits<Type>::typeName)
             << " field " << fieldTableName_
             << " on patch " << this->patch().name()
-            << " up to z = " << zmax
             << endl;
 
         //Info<< *this << endl; // print out all fvPatchField properties (says inletValue is nonuniform List<vector>)

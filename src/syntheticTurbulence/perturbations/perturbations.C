@@ -103,7 +103,22 @@ perturbations::perturbations
         perturbDict_.lookupOrDefault<scalar>
         (
             "perturbationVariance",
-            0.0 // not used if correctVariances is false
+            1.0 // not used if correctVariances is false
+        )
+    ),
+
+    perturbationControlTable_
+    (
+        perturbDict_.lookup("perturbationControlTable")
+    ),
+
+    // Perturbation control
+    perturbationHeightControl_
+    (
+        perturbDict_.lookupOrDefault<word>
+        (
+            "perturbationHeightControl",
+            "constant"
         )
     ),
 
@@ -129,10 +144,23 @@ perturbations::perturbations
     tlast(-1)
 
 {
+    setupControlTable();
     setupProbe();
 }
 
 // * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * * //
+
+void perturbations::setupControlTable()
+{
+    label N = perturbationControlTable_.size();
+    controlTime = List<scalar>(N, 0.0);
+    controlHeight = List<scalar>(N, 0.0);
+    forAll(perturbationControlTable_, timeI)
+    {
+        controlTime[timeI] = perturbationControlTable_[timeI][0];
+        controlHeight[timeI] = perturbationControlTable_[timeI][1];
+    }
+}
 
 void perturbations::setupProbe()
 {
@@ -197,14 +225,14 @@ inline scalar perturbations::tanhScaling(scalar z) const
 void perturbations::setScaling()
 {
     scaling.resize(Ny*Nz);
-    scalar scalingFactor = 1.0;
+    scalar scalingFactor = perturbationVariance_;
     if(correctVariance_)
     {
         // TODO: calculate scalingFactor if correctVariances is true
     }
     if(perturbedLayerCutoff_ == "simple")
     {
-        Info<< "Setup scaling with simple cutoff" << endl;
+        Info<< "Updated scaling with simple cutoff" << endl;
         forAll(scaling, I)
         {
             if(points[I].z() < perturbedLayerHeight_)
@@ -219,7 +247,7 @@ void perturbations::setScaling()
     }
     else if(perturbedLayerCutoff_ == "tanh")
     {
-        Info<< "Setup scaling with tanh cutoff" << endl;
+        Info<< "Updated scaling with tanh cutoff" << endl;
         tanhParam = -Foam::atanh(2*transitionEdgeScaling_ - 1);
         forAll(scaling, I)
         {
@@ -300,6 +328,49 @@ void perturbations::setupMapper()
 
 }
 
+void perturbations::updatePerturbationHeight
+(
+    scalar t
+)
+{
+    if( t < controlTime[0] )
+    {
+        Info<< "WARNING: t < " << controlTime[0] << endl;
+        perturbedLayerHeight_ = controlHeight[0];
+    }
+    else if( t > controlTime[controlTime.size()-1] )
+    {
+        Info<< "WARNING: t > " << controlTime[controlTime.size()-1] << endl;
+        perturbedLayerHeight_ = controlHeight[controlTime.size()-1];
+    }
+    else
+    {
+        if(t!=tlast)
+        {
+            Info<< "Updating perturbation height for t= " << t;
+            label i;
+            for(i=1; i<controlTime.size(); ++i)
+            {
+                if(controlTime[i] > t) break;
+            }
+            if(i<controlTime.size())
+            {
+                Info<< " between " << controlTime[i-1]
+                    << " and " << controlTime[i] << endl;
+                perturbedLayerHeight_ = controlHeight[i-1]
+                    + (controlHeight[i]-controlHeight[i-1])/(controlTime[i]-controlTime[i-1])
+                        * (t-controlTime[i-1]);
+            }
+            else
+            {
+                Info<< " (last time)" << endl;
+                perturbedLayerHeight_ = controlHeight[controlTime.size()-1];
+            }
+        }
+    }
+    Info<< "Perturbation height = " << perturbedLayerHeight_ << endl;
+}
+
 const Field<vector>& perturbations::getPerturbationsAtTime
 (
     scalar t,
@@ -310,6 +381,12 @@ const Field<vector>& perturbations::getPerturbationsAtTime
 //        << " with rotation angle "
 //        << 180.0/Foam::constant::mathematical::pi * ang << " deg"
 //        << endl;
+
+    if(perturbationHeightControl_ != "constant")
+    {
+        updatePerturbationHeight(t);
+        setScaling();
+    }
 
     if(mapperPtr_.empty()) setupMapper();
 
@@ -326,9 +403,9 @@ const Field<vector>& perturbations::getPerturbationsAtTime
     }
     else
     {
+        Info<< "Retrieving inflow for t= " << t;
         if(periodic)
         {
-            Info<< "t= " << t;
             t -= int(t/period)*period;
             Info<< " mapped to t= " << t;
         }
