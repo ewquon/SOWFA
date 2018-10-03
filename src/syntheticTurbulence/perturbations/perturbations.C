@@ -367,27 +367,24 @@ void perturbations::updatePerturbationHeight
     }
     else
     {
-        if(t!=tlast)
+        Info<< "Updating perturbation height from control table for t= " << t;
+        label i;
+        for(i=1; i<controlTime.size(); ++i)
         {
-            Info<< "Updating perturbation height for t= " << t;
-            label i;
-            for(i=1; i<controlTime.size(); ++i)
-            {
-                if(controlTime[i] > t) break;
-            }
-            if(i<controlTime.size())
-            {
-                Info<< " between " << controlTime[i-1]
-                    << " and " << controlTime[i] << endl;
-                perturbedLayerHeight_ = controlHeight[i-1]
-                    + (controlHeight[i]-controlHeight[i-1])/(controlTime[i]-controlTime[i-1])
-                        * (t-controlTime[i-1]);
-            }
-            else
-            {
-                Info<< " (last time)" << endl;
-                perturbedLayerHeight_ = controlHeight[controlTime.size()-1];
-            }
+            if(controlTime[i] > t) break;
+        }
+        if(i<controlTime.size())
+        {
+            Info<< " between " << controlTime[i-1]
+                << " and " << controlTime[i] << endl;
+            perturbedLayerHeight_ = controlHeight[i-1]
+                + (controlHeight[i]-controlHeight[i-1])/(controlTime[i]-controlTime[i-1])
+                    * (t-controlTime[i-1]);
+        }
+        else
+        {
+            Info<< " (last time)" << endl;
+            perturbedLayerHeight_ = controlHeight[controlTime.size()-1];
         }
     }
     Info<< "Perturbation height = " << perturbedLayerHeight_ << endl;
@@ -404,14 +401,19 @@ const Field<vector>& perturbations::getPerturbationsAtTime
 //        << 180.0/Foam::constant::mathematical::pi * ang << " deg"
 //        << endl;
 
+    if(t==tlast) return Ulast;
+
+    // first time only
+    if(mapperPtr_.empty()) setupMapper();
+
+    // update scaling if height control is "table" or "auto"
     if(perturbationHeightControl_ != "constant")
     {
         updatePerturbationHeight(t);
         setScaling();
     }
 
-    if(mapperPtr_.empty()) setupMapper();
-
+    // now interpolate
     List<vector> U;
     if( t < times[0] )
     {
@@ -426,36 +428,30 @@ const Field<vector>& perturbations::getPerturbationsAtTime
     else
     {
         Info<< "Retrieving inflow for t= " << t;
+        scalar t0 = t;
         if(periodic)
         {
-            t -= int(t/period)*period;
-            Info<< " mapped to t= " << t;
+            t0 -= int(t0/period)*period;
+            Info<< " mapped to t= " << t0;
         }
-        if(t==tlast)
+
+        tlast = t;
+        label i;
+        for(i=1; i<times.size(); ++i)
         {
-            Info<< " (saved)" << endl;
-            return Ulast;
+            if(times[i] > t0) break;
+        }
+        if(i<times.size())
+        {
+            Info<< " between " << times[i-1] << " and " << times[i] << endl;
+            U = perturb[i-1]
+                + (perturb[i]-perturb[i-1])/(times[i]-times[i-1]) * (t0-times[i-1]);
         }
         else
         {
-            tlast = t;
-            label i;
-            for(i=1; i<times.size(); ++i)
-            {
-                if(times[i] > t) break;
-            }
-            if(i<times.size())
-            {
-                Info<< " between " << times[i-1] << " and " << times[i] << endl;
-                U = perturb[i-1]
-                    + (perturb[i]-perturb[i-1])/(times[i]-times[i-1]) * (t-times[i-1]);
-            }
-            else
-            {
-                Info<< " between " << times[i-1] << " and " << period << endl;
-                U = perturb[i-1]
-                    + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t-times[i-1]);
-            }
+            Info<< " between " << times[i-1] << " and " << period << endl;
+            U = perturb[i-1]
+                + (perturb[0]-perturb[i-1])/(period-times[i-1]) * (t0-times[i-1]);
         }
     }
 
