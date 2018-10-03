@@ -37,7 +37,7 @@ turbsimField    "ds20_TI20_dt2";    // Name of .bts binary full-field time
 //
 correctVariance         false;      // Scale perturbations to match specified
                                     //   'perturbationVariance' [optional]
-perturbedLayerCutoff    "tanh";     // (simple | tanh, default) [optional]
+perturbedLayerCutoff    "tanh";     // (simple | linear | tanh, default) [optional]
 transitionThickness     100.0;      // Parameter for tanh cutoff ~5*dz seems
                                     //   reasonable [optional]
 transitionEdgeScaling   0.97;       // Value of s (e.g., 0.7, 0.97, 0.997, ) at
@@ -48,11 +48,53 @@ transitionEdgeScaling   0.97;       // Value of s (e.g., 0.7, 0.97, 0.997, ) at
 perturbedLayerHeight    500.0;      // Approximate height up to which
                                     //   perturbations are applied
 perturbationVariance    1.0;        // Streamwise velocity variance, used to
-                                    //   (equally) scale the three variances IF
-                                    //   'correctVariances' is true
+                                    //   (equally) scale the three variances
+
+// perturbation controls
+perturbationHeightControl   table; // (constant | table | auto)
+
+perturbationControlTable
+(
+(64800 560.0)
+(65400 600.0)
+(66000 600.0)
+(66600 600.0)
+(67200 605.0)
+(67800 615.0)
+(68400 665.0)
+(69000 670.0)
+(69600 710.0)
+(70200 715.0)
+(70800 755.0)
+(71400 795.0)
+(72000 800.0)
+(72600 800.0)
+(73200 810.0)
+(73800 845.0)
+(74400 850.0)
+(75000 855.0)
+(75600 865.0)
+(76200 870.0)
+(76800 870.0)
+(77400 875.0)
+(78000 885.0)
+(78600 885.0)
+(79200 860.0)
+(79800 835.0)
+(80400 820.0)
+(81000 810.0)
+(81600 805.0)
+(82200 795.0)
+(82800 785.0)
+(83400 775.0)
+(84000 760.0)
+(84600 760.0)
+(85200 765.0)
+(85800 780.0)
+(86400 795.0)
+);
 
 // TODO:
-updatePerturbedLayerHeight  false;
 updatePerturbationVariance  false;
 
 // ************************************************************************* //
