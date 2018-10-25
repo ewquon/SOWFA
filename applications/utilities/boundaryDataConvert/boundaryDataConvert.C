@@ -34,7 +34,6 @@ Notes
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
-//#include "timeSelector.H"
 #include "Time.H"
 
 #include "IFstream.H"
@@ -99,15 +98,23 @@ void writeBoundaryDataField
     Info<< "        wrote " << outputField.objectPath() << endl;
 }
 
+
 int main(int argc, char *argv[])
 {
-//    timeSelector::addOptions();
-//    #include "addRegionOption.H"
-//    #include "addDictOption.H"
+    argList::noParallel();
+    argList::addBoolOption
+    (
+        "pointsOnly",
+        "only output boundaryData points"
+    );
+    argList::addOption
+    (
+        "cellDisplacement",
+        "path",
+        "directory containing sampled boundary cellDisplacement in foamFile format"
+    );
+
     #include "setRootCase.H"
-    #include "createTime.H"
-//    instantList timeDirs = timeSelector::select0(runTime, args);
-//    #include "createNamedMesh.H"
 
     // TODO: add boundaryDataPre data location option
     fileName prePath("postProcessing/boundaryDataPre");
@@ -117,6 +124,17 @@ int main(int argc, char *argv[])
     List<word> scalarFields(1, "T");
     List<word> vectorFields(1, "U");
 
+    const bool pointsOnly = args.optionFound("pointsOnly");
+    fileName dispPath;
+    const bool addDisplacement = args.optionReadIfPresent
+    (
+        "cellDisplacement",
+        dispPath
+    );
+
+    #include "createTime.H"
+//    instantList timeDirs = timeSelector::select0(runTime, args);
+//    #include "createNamedMesh.H"
     instantList outputTimes = Time::findTimes(prePath);
     Info<< outputTimes.size() << " times sampled: "
         << outputTimes[0].value() << " .. "
@@ -190,6 +208,19 @@ int main(int argc, char *argv[])
             << " (" << zMin << ", " << zMax << ")"
             << endl;
 
+        //- read in cell displacements if provided
+        List<vector> displacement(faceCenters.size(), vector::zero);
+        if (addDisplacement)
+        {
+            fileName cellDisplacementPath
+            (
+                dispPath / patchName / "vectorField" / "cellDisplacement"
+            );
+            IFstream(cellDisplacementPath)() >> displacement;
+            Info<< "Read " << cellDisplacementPath << endl;
+            //Info<< displacement[0] << " " << displacement[displacement.size()-1] << endl;
+        }
+
         //- now write out an openfoam IO object
         pointIOField pts
         (
@@ -208,7 +239,7 @@ int main(int argc, char *argv[])
         //pts = faceCenters;  // not sure why you can't assign a list to pointField which should be a derived list
         forAll(pts, ptI)
         {
-            pts[ptI] = faceCenters[ptI];
+            pts[ptI] = faceCenters[ptI] + displacement[ptI];
         }
         mkDir(pts.path());
         pts.write();
@@ -219,42 +250,45 @@ int main(int argc, char *argv[])
     //
     // Write out requested fields over all times
     //
-    forAll(boundaries, patchI)
+    if (!pointsOnly)
     {
-        word patchName(boundaries[patchI]);
-        Info<< "\nProcessing boundary " << patchName << endl;
-
-        forAll(outputTimes, timeI)
+        forAll(boundaries, patchI)
         {
-            word timeName(outputTimes[timeI].name());
-            Info<< "  t = " << outputTimes[timeI].value() << endl;
+            word patchName(boundaries[patchI]);
+            Info<< "\nProcessing boundary " << patchName << endl;
 
-            //- process scalar fields
-            forAll(scalarFields, fieldI)
+            forAll(outputTimes, timeI)
             {
-                writeBoundaryDataField<scalar>
-                (
-                    runTime,
-                    prePath,
-                    outDir,
-                    scalarFields[fieldI],
-                    timeName,
-                    patchName
-                );
-            }
+                word timeName(outputTimes[timeI].name());
+                Info<< "  t = " << outputTimes[timeI].value() << endl;
 
-            //- process vector fields
-            forAll(vectorFields, fieldI)
-            {
-                writeBoundaryDataField<vector>
-                (
-                    runTime,
-                    prePath,
-                    outDir,
-                    vectorFields[fieldI],
-                    timeName,
-                    patchName
-                );
+                //- process scalar fields
+                forAll(scalarFields, fieldI)
+                {
+                    writeBoundaryDataField<scalar>
+                    (
+                        runTime,
+                        prePath,
+                        outDir,
+                        scalarFields[fieldI],
+                        timeName,
+                        patchName
+                    );
+                }
+
+                //- process vector fields
+                forAll(vectorFields, fieldI)
+                {
+                    writeBoundaryDataField<vector>
+                    (
+                        runTime,
+                        prePath,
+                        outDir,
+                        vectorFields[fieldI],
+                        timeName,
+                        patchName
+                    );
+                }
             }
         }
     }
