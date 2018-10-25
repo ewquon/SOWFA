@@ -41,6 +41,7 @@ Notes
 
 #include "vector.H"
 #include "pointIOField.H"
+#include "AverageIOField.H"
 
 using namespace Foam;
 
@@ -70,7 +71,37 @@ void writeBoundaryDataField
     IFstream(sourcePath)() >> sampledField;
 
     //- write target data
-    IOField<Type> outputField
+//
+// This writes all the data out correctly but the header incorrectly labels the
+// object class as <Type>Field instead of <Type>AverageField; ultimately
+// resulting in a runtime error.
+//
+//    IOField<Type> outputField
+//    (
+//        IOobject
+//        (
+//            fieldName,
+//            runTime.constant(),
+//            "boundaryData"/patchName/timeName,
+//            runTime,
+//            IOobject::NO_READ,
+//            IOobject::AUTO_WRITE,
+//            false
+//        )
+//    );
+//    mkDir(outputField.path());
+//    OFstream os
+//    (
+//        outputField.objectPath(),
+//        runTime.writeFormat()
+//    );
+//    outputField.writeHeader(os);
+//    os << "// Average" << endl;
+//    os << pTraits<Type>::zero << endl;
+//    os << sampledField;
+//    //outputField.writeFooter(os);
+
+    AverageIOField<Type> outputField
     (
         IOobject
         (
@@ -81,19 +112,16 @@ void writeBoundaryDataField
             IOobject::NO_READ,
             IOobject::AUTO_WRITE,
             false
-        )
+        ),
+        sampledField.size()
     );
     mkDir(outputField.path());
-    OFstream os
-    (
-        outputField.objectPath(),
-        runTime.writeFormat()
-    );
-    outputField.writeHeader(os);
-    os << "// Average" << endl;
-    os << pTraits<Type>::zero << endl;
-    os << sampledField;
-    //outputField.writeFooter(os);
+    //outputField = sampledField;  // not sure why you can't assign a list to pointField which should be a derived list
+    forAll(outputField, faceI)
+    {
+        outputField[faceI] = sampledField[faceI];
+    }
+    outputField.write();
 
     Info<< "        wrote " << outputField.objectPath() << endl;
 }
