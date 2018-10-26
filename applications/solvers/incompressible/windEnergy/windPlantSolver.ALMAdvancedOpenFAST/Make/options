@@ -59,3 +59,5 @@ EXE_LIBS = \
     -L$(HDF5_DIR)/lib/ \
     -lhdf5_hl \
     -lhdf5
+
+/*    $(GCCXX_LINK_THR) */
