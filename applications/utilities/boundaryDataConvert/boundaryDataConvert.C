@@ -139,7 +139,13 @@ int main(int argc, char *argv[])
     (
         "cellDisplacement",
         "path",
-        "directory containing sampled boundary cellDisplacement in foamFile format"
+        "directory containing sampled boundary vectorField 'cellDisplacement' in foamFile format"
+    );
+    argList::addOption
+    (
+        "patches",
+        "fileNameList",
+        "list of boundary patches for which to convert to proper boundaryData"
     );
 
     #include "setRootCase.H"
@@ -173,19 +179,33 @@ int main(int argc, char *argv[])
     // Read sampled boundary patches from the first time
     //
     instant time0 = outputTimes[0];
-    fileNameList boundaries
+    fileNameList dlist
     (
         readDir(prePath/time0.name(), fileName::DIRECTORY)
     );
-    Info<< "boundaries: " << boundaries << endl;
+    List<word> patches;
+    if (args.optionFound("patches"))
+    {
+        args.optionLookup("patches")() >> patches;
+    }
+    else
+    {
+        Info<< "Found patches: " << endl;
+        forAll(dlist,patchI)
+        {
+            Info<< dlist[patchI] << endl;
+            patches.append(dlist[patchI]);
+        }
+    }
+    Info<< "boundary patches: " << patches << endl;
 
     //
     // Write out boundary points at face centers, assuming they're invariant
     // TODO: translate plane here, if needed
     //
-    forAll(boundaries, patchI)
+    forAll(patches, patchI)
     {
-        word patchName = boundaries[patchI];
+        word patchName = patches[patchI];
 
         //- read in face centres
         fileName faceCentersPath
@@ -280,9 +300,9 @@ int main(int argc, char *argv[])
     //
     if (!pointsOnly)
     {
-        forAll(boundaries, patchI)
+        forAll(patches, patchI)
         {
-            word patchName(boundaries[patchI]);
+            word patchName(patches[patchI]);
             Info<< "\nProcessing boundary " << patchName << endl;
 
             forAll(outputTimes, timeI)
