@@ -55,7 +55,8 @@ void writeBoundaryDataField
     const fileName outDir,
     const word fieldName,
     const word timeName,
-    const word patchName    
+    const word patchName,
+    const List<label>& pointOrder
 )
 {
     //- read source data
@@ -119,11 +120,12 @@ void writeBoundaryDataField
     //outputField = sampledField;  // not sure why you can't assign a list to pointField which should be a derived list
     forAll(outputField, faceI)
     {
-        outputField[faceI] = sampledField[faceI];
+        //outputField[faceI] = sampledField[faceI];
+        outputField[faceI] = sampledField[pointOrder[faceI]];
     }
     outputField.write();
 
-    Info<< "        wrote " << outputField.objectPath() << endl;
+    Info<< "    wrote " << outputField.objectPath() << endl;
 }
 
 
@@ -137,9 +139,15 @@ int main(int argc, char *argv[])
     );
     argList::addOption
     (
-        "cellDisplacement",
+        "movedPoints",
         "path",
-        "directory containing sampled boundary vectorField 'cellDisplacement' in foamFile format"
+        "directory containing points (in foamFile format) displaced by moveDynamicMesh"
+    );
+    argList::addOption
+    (
+        "ref",
+        "path",
+        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points"
     );
     argList::addOption
     (
@@ -160,10 +168,16 @@ int main(int argc, char *argv[])
 
     const bool pointsOnly = args.optionFound("pointsOnly");
     fileName dispPath;
-    const bool addDisplacement = args.optionReadIfPresent
+    const bool replacePoints = args.optionReadIfPresent
     (
-        "cellDisplacement",
+        "movedPoints",
         dispPath
+    );
+    fileName refPath;
+    const bool haveRef = args.optionReadIfPresent
+    (
+        "ref",
+        refPath
     );
 
     #include "createTime.H"
@@ -187,6 +201,7 @@ int main(int argc, char *argv[])
     if (args.optionFound("patches"))
     {
         args.optionLookup("patches")() >> patches;
+        Info<< "Specified boundary patches: " << patches << endl;
     }
     else
     {
@@ -197,17 +212,20 @@ int main(int argc, char *argv[])
             patches.append(dlist[patchI]);
         }
     }
-    Info<< "boundary patches: " << patches << endl;
 
     //
     // Write out boundary points at face centers, assuming they're invariant
-    // TODO: translate plane here, if needed
     //
+    List<List<label> > order(patches.size());
     forAll(patches, patchI)
     {
         word patchName = patches[patchI];
 
         //- read in face centres
+        //  These should be foamFile format, output from boundaryDataPre
+        //  sampling output during the simulation; one unfortunate consequence
+        //  of the coprocessing is that the ordering of points in the sampling
+        //  output is not necessarily standard.
         fileName faceCentersPath
         (
             prePath / time0.name() / patchName / "faceCentres"
@@ -256,17 +274,58 @@ int main(int argc, char *argv[])
             << " (" << zMin << ", " << zMax << ")"
             << endl;
 
-        //- read in cell displacements if provided
-        List<vector> displacement(faceCenters.size(), vector::zero);
-        if (addDisplacement)
+        //- find order from reference sampling patch
+        //  These should be foamFile format, sampled from a reconstructed mesh
+        order[patchI] = List<label>(faceCenters.size());
+        if (haveRef)
         {
-            fileName cellDisplacementPath
+            fileName refPointsFile
             (
-                dispPath / patchName / "vectorField" / "cellDisplacement"
+                refPath / patchName / "faceCentres"
             );
-            IFstream(cellDisplacementPath)() >> displacement;
-            Info<< "Read " << cellDisplacementPath << endl;
-            //Info<< displacement[0] << " " << displacement[displacement.size()-1] << endl;
+            List<vector> refPoints;
+            IFstream(refPointsFile)() >> refPoints;
+            forAll(refPoints, refI)
+            {
+                label index(-1);
+                for( int i=0; i < faceCenters.size(); i++ )
+                {
+                    if(Foam::mag(refPoints[refI] - faceCenters[i]) < 1e-5)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index < 0)
+                {
+                    Info<< "Warning: ref point not matched with actual face center"
+                        << endl;
+                }
+                order[patchI][refI] = index;
+            }
+            Info<< "Note: Reordering assuming the moved mesh and the reference"
+                << " mesh have the same standard OpenFOAM ordering." << endl;
+        }
+        else
+        {
+            // don't reorder
+            forAll(faceCenters, faceI)
+            {
+                order[patchI][faceI] = faceI;
+            }
+            Info<< "Note: no reordering will be performed." << endl;
+        }
+
+        //- read in moved points, if provided
+        //  These should be foamFile format, sampled from a reconstructed mesh
+        if (replacePoints)
+        {
+            fileName pointsFile
+            (
+                dispPath / patchName / "faceCentres"
+            );
+            IFstream(pointsFile)() >> faceCenters;
+            Info<< "Read moved points from " << pointsFile << endl;
         }
 
         //- now write out an openfoam IO object
@@ -287,7 +346,7 @@ int main(int argc, char *argv[])
         //pts = faceCenters;  // not sure why you can't assign a list to pointField which should be a derived list
         forAll(pts, ptI)
         {
-            pts[ptI] = faceCenters[ptI] + displacement[ptI];
+            pts[ptI] = faceCenters[ptI];
         }
         mkDir(pts.path());
         pts.write();
@@ -300,15 +359,15 @@ int main(int argc, char *argv[])
     //
     if (!pointsOnly)
     {
-        forAll(patches, patchI)
+        forAll(outputTimes, timeI)
         {
-            word patchName(patches[patchI]);
-            Info<< "\nProcessing boundary " << patchName << endl;
+            word timeName(outputTimes[timeI].name());
+            Info<< "\nt = " << outputTimes[timeI].value() << endl;
 
-            forAll(outputTimes, timeI)
+            forAll(patches, patchI)
             {
-                word timeName(outputTimes[timeI].name());
-                Info<< "  t = " << outputTimes[timeI].value() << endl;
+                word patchName(patches[patchI]);
+                Info<< "Processing boundary " << patchName << endl;
 
                 //- process scalar fields
                 forAll(scalarFields, fieldI)
@@ -320,7 +379,8 @@ int main(int argc, char *argv[])
                         outDir,
                         scalarFields[fieldI],
                         timeName,
-                        patchName
+                        patchName,
+                        order[patchI]
                     );
                 }
 
@@ -334,7 +394,8 @@ int main(int argc, char *argv[])
                         outDir,
                         vectorFields[fieldI],
                         timeName,
-                        patchName
+                        patchName,
+                        order[patchI]
                     );
                 }
             }
