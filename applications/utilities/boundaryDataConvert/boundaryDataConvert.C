@@ -155,6 +155,11 @@ int main(int argc, char *argv[])
         "fileNameList",
         "list of boundary patches for which to convert to proper boundaryData"
     );
+    argList::addBoolOption
+    (
+        "enforceLapseRate",
+        "modify the potential temperature field above a specified height to enforce a specified lapse rate; depends on dictionary constant/lapseDict"
+    );
 
     #include "setRootCase.H"
 
@@ -179,15 +184,47 @@ int main(int argc, char *argv[])
         "ref",
         refPath
     );
+    const bool enforceLapseRate = args.optionFound("enforceLapseRate");
+    scalar lapseRate;
+    scalar blendStart;
+    scalar blendEnd;
+    scalar blendLayerHeight;
 
     #include "createTime.H"
 //    instantList timeDirs = timeSelector::select0(runTime, args);
 //    #include "createNamedMesh.H"
     instantList outputTimes = Time::findTimes(prePath);
-    Info<< outputTimes.size() << " times sampled: "
+    Info<< endl
+        << outputTimes.size() << " times sampled: "
         << outputTimes[0].value() << " .. "
         << outputTimes[outputTimes.size()-1].value()
         << endl;
+
+    // read additional parameters for enforcing the lapse rate
+    if(enforceLapseRate)
+    {
+        IOdictionary lapseDict
+        (
+            IOobject
+            (
+                "lapseDict",
+                runTime.time().constant(),
+                runTime,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            )
+        );
+        lapseRate = lapseDict.lookupOrDefault<scalar>("lapseDict",1.0);
+        lapseRate /= 1000.0;  // convert to K/m
+        blendStart = readScalar(lapseDict.lookup("blendStart"));
+        blendLayerHeight = lapseDict.lookupOrDefault<scalar>("blendLayerHeight",100.0);
+        blendEnd = blendStart + blendLayerHeight;
+        Info<< endl
+            << "A lapse rate of " << lapseRate
+            << " will be enforced blending from " << blendStart
+            << " to " << blendEnd
+            << endl << endl;
+    }
 
     //
     // Read sampled boundary patches from the first time
