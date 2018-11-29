@@ -47,6 +47,9 @@ using namespace Foam;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+static List<List<scalar> > _dummyListScalarList;
+static List<DynamicList<label> > _dummyListLabelList;
+
 template<class Type>
 void writeBoundaryDataField
 (
@@ -55,77 +58,110 @@ void writeBoundaryDataField
     const fileName outDir,
     const word fieldName,
     const word timeName,
-    const word patchName,
-    const List<label>& pointOrder
+    const List<word>& patches,
+    const List<List<label> >& order,
+    // this is getting messy...
+    const scalar lapseRate = -1.0,
+    const List<List<scalar> >& blend = _dummyListScalarList,
+    const List<DynamicList<label> >& inversionIDs = _dummyListLabelList
 )
 {
-    //- read source data
-    fileName sourcePath
-    (
-        prePath
-       /timeName
-       /patchName
-       /pTraits<Type>::typeName+"Field"
-       /fieldName
-    );
-    List<Type> sampledField;
-    IFstream(sourcePath)() >> sampledField;
-
-    //- write target data
-//
-// This writes all the data out correctly but the header incorrectly labels the
-// object class as <Type>Field instead of <Type>AverageField; ultimately
-// resulting in a runtime error.
-//
-//    IOField<Type> outputField
-//    (
-//        IOobject
-//        (
-//            fieldName,
-//            runTime.constant(),
-//            "boundaryData"/patchName/timeName,
-//            runTime,
-//            IOobject::NO_READ,
-//            IOobject::AUTO_WRITE,
-//            false
-//        )
-//    );
-//    mkDir(outputField.path());
-//    OFstream os
-//    (
-//        outputField.objectPath(),
-//        runTime.writeFormat()
-//    );
-//    outputField.writeHeader(os);
-//    os << "// Average" << endl;
-//    os << pTraits<Type>::zero << endl;
-//    os << sampledField;
-//    //outputField.writeFooter(os);
-
-    AverageIOField<Type> outputField
-    (
-        IOobject
-        (
-            fieldName,
-            runTime.constant(),
-            "boundaryData"/patchName/timeName,
-            runTime,
-            IOobject::NO_READ,
-            IOobject::AUTO_WRITE,
-            false
-        ),
-        sampledField.size()
-    );
-    mkDir(outputField.path());
-    //outputField = sampledField;  // not sure why you can't assign a list to pointField which should be a derived list
-    forAll(outputField, faceI)
+    // First pass: read all data, get layer average
+    List<List<Type> > sampledField(patches.size());
+    Type invBottom(pTraits<Type>::zero); // average temperature at bottom of inversion layer
+    label layercount(0);
+    forAll(patches, patchI)
     {
-        //outputField[faceI] = sampledField[faceI];
-        outputField[faceI] = sampledField[pointOrder[faceI]];
-    }
-    outputField.write();
+        word patchName(patches[patchI]);
+        Info<< "Processing boundary " << patchName << endl;
 
-    Info<< "    wrote " << outputField.objectPath() << endl;
+        //- read source data
+        fileName sourcePath
+        (
+            prePath
+           /timeName
+           /patchName
+           /pTraits<Type>::typeName+"Field"
+           /fieldName
+        );
+        sampledField[patchI] = List<Type>();
+        IFstream(sourcePath)() >> sampledField[patchI];
+
+        //- modify the inversion layer if requested
+        if(lapseRate >= 0)
+        {
+            forAll(inversionIDs[patchI], I)
+            {
+                invBottom += sampledField[patchI][inversionIDs[patchI][I]];
+            }
+            layercount += inversionIDs[patchI].size();
+        }
+    }
+
+    if(lapseRate >= 0)
+    {
+        invBottom /= layercount;
+        Info<< "    invBottom = " << invBottom << endl;
+    }
+
+    // Second pass: write the target data
+    forAll(patches, patchI)
+    {
+    //
+    // This writes all the data out correctly but the header incorrectly labels the
+    // object class as <Type>Field instead of <Type>AverageField; ultimately
+    // resulting in a runtime error.
+    //
+    //    IOField<Type> outputField
+    //    (
+    //        IOobject
+    //        (
+    //            fieldName,
+    //            runTime.constant(),
+    //            "boundaryData"/patchName/timeName,
+    //            runTime,
+    //            IOobject::NO_READ,
+    //            IOobject::AUTO_WRITE,
+    //            false
+    //        )
+    //    );
+    //    mkDir(outputField.path());
+    //    OFstream os
+    //    (
+    //        outputField.objectPath(),
+    //        runTime.writeFormat()
+    //    );
+    //    outputField.writeHeader(os);
+    //    os << "// Average" << endl;
+    //    os << pTraits<Type>::zero << endl;
+    //    os << sampledField;
+    //    //outputField.writeFooter(os);
+
+        AverageIOField<Type> outputField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.constant(),
+                "boundaryData"/patches[patchI]/timeName,
+                runTime,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE,
+                false
+            ),
+            sampledField[patchI].size()
+        );
+        mkDir(outputField.path());
+        //outputField = sampledField[patchI];  // not sure why you can't assign a list to pointField which should be a derived list
+        forAll(outputField, faceI)
+        {
+            //outputField[faceI] = sampledField[patchI][faceI];
+            outputField[faceI] = sampledField[patchI][order[patchI][faceI]];
+        }
+        outputField.write();
+
+        Info<< "    wrote " << outputField.objectPath() << endl;
+    }
 }
 
 
@@ -185,9 +221,9 @@ int main(int argc, char *argv[])
         refPath
     );
     const bool enforceLapseRate = args.optionFound("enforceLapseRate");
-    scalar lapseRate;
-    scalar blendStart(0); // suppress compiler warning
-    scalar blendEnd;
+    scalar lapseRate(0.0);
+    scalar blendStart(0.0); // suppress compiler warning
+    scalar blendEnd(0.0);
     scalar blendLayerHeight;
 
     #include "createTime.H"
@@ -254,7 +290,10 @@ int main(int argc, char *argv[])
     // Write out boundary points at face centers, assuming they're invariant
     //
     List<List<label> > order(patches.size());
-    scalar zStart(-1); // for enforceLapseRate
+    // for enforceLapseRate:
+    scalar zStart(-1);
+    List<DynamicList<label> > inversionFaces(patches.size());
+    List<List<scalar> > blending(patches.size());
     forAll(patches, patchI)
     {
         word patchName = patches[patchI];
@@ -336,6 +375,26 @@ int main(int argc, char *argv[])
             {
                 Info<< "WARNING: mismatch in nearest z value: "
                     << nearest << endl;
+            }
+
+            //- setup blending field and save inversion face IDs
+            //  blending is from 0 to 1, where 1 is T determined entirely by the lapse rate
+            blending[patchI] = List<scalar>(faceCenters.size(), 1.0);
+            forAll(faceCenters, faceI)
+            {
+                scalar faceZ = faceCenters[faceI].z();
+                if(faceZ == zStart)
+                {
+                    inversionFaces[patchI].append(faceI);
+                }
+                if(faceZ <= blendStart)
+                {
+                    blending[patchI][faceI] = 0.0;
+                }
+                else if(faceZ < blendEnd)
+                {
+                    blending[patchI][faceI] = (faceZ - blendStart) / (blendEnd - blendStart);
+                }
             }
         }
 
@@ -429,13 +488,10 @@ int main(int argc, char *argv[])
             word timeName(outputTimes[timeI].name());
             Info<< "\nt = " << outputTimes[timeI].value() << endl;
 
-            forAll(patches, patchI)
+            //- process scalar fields
+            forAll(scalarFields, fieldI)
             {
-                word patchName(patches[patchI]);
-                Info<< "Processing boundary " << patchName << endl;
-
-                //- process scalar fields
-                forAll(scalarFields, fieldI)
+                if(enforceLapseRate && scalarFields[fieldI]=="T")
                 {
                     writeBoundaryDataField<scalar>
                     (
@@ -444,25 +500,41 @@ int main(int argc, char *argv[])
                         outDir,
                         scalarFields[fieldI],
                         timeName,
-                        patchName,
-                        order[patchI]
+                        patches,
+                        order,
+                        lapseRate,
+                        blending,
+                        inversionFaces
                     );
                 }
-
-                //- process vector fields
-                forAll(vectorFields, fieldI)
+                else
                 {
-                    writeBoundaryDataField<vector>
+                    writeBoundaryDataField<scalar>
                     (
                         runTime,
                         prePath,
                         outDir,
-                        vectorFields[fieldI],
+                        scalarFields[fieldI],
                         timeName,
-                        patchName,
-                        order[patchI]
+                        patches,
+                        order
                     );
                 }
+            }
+
+            //- process vector fields
+            forAll(vectorFields, fieldI)
+            {
+                writeBoundaryDataField<vector>
+                (
+                    runTime,
+                    prePath,
+                    outDir,
+                    vectorFields[fieldI],
+                    timeName,
+                    patches,
+                    order
+                );
             }
         }
     }
