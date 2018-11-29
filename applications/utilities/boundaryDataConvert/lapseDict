@@ -1,0 +1,34 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.0.x                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          lapseDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// T(z) = Tbottom + lapseRate*(z-blendStart)
+//   where Tbottom is the averaged temperature at zStart >= blendStart
+//   over all of the boundaries
+
+lapseRate           1.0;    // dT/dz [K/km]
+
+// For a strong inversion centered at z=600 and thickness of 100, the strong
+// inversion layer begins at z=550. This will linearly blend between z=500
+// and 550 to completely remove the strong layer.
+
+blendStart          500;    // start blending T(x,y,z) towards specified T(z)
+                            //   at this height
+blendLayerHeight     50;    // above zStart+blendLayerHeight, T=T(z)
+
+// ************************************************************************* //
