@@ -55,77 +55,125 @@ void writeBoundaryDataField
     const fileName outDir,
     const word fieldName,
     const word timeName,
-    const word patchName,
-    const List<label>& pointOrder
+    const List<word>& patches,
+    const List<List<label> >& order,
+    // this is getting messy...
+    const List<List<Type> >& blendField,
+    const List<List<scalar> >& blending,
+    const List<DynamicList<label> >& inversionFaceIDs,
+    const bool modifyField = false
 )
 {
-    //- read source data
-    fileName sourcePath
-    (
-        prePath
-       /timeName
-       /patchName
-       /pTraits<Type>::typeName+"Field"
-       /fieldName
-    );
-    List<Type> sampledField;
-    IFstream(sourcePath)() >> sampledField;
-
-    //- write target data
-//
-// This writes all the data out correctly but the header incorrectly labels the
-// object class as <Type>Field instead of <Type>AverageField; ultimately
-// resulting in a runtime error.
-//
-//    IOField<Type> outputField
-//    (
-//        IOobject
-//        (
-//            fieldName,
-//            runTime.constant(),
-//            "boundaryData"/patchName/timeName,
-//            runTime,
-//            IOobject::NO_READ,
-//            IOobject::AUTO_WRITE,
-//            false
-//        )
-//    );
-//    mkDir(outputField.path());
-//    OFstream os
-//    (
-//        outputField.objectPath(),
-//        runTime.writeFormat()
-//    );
-//    outputField.writeHeader(os);
-//    os << "// Average" << endl;
-//    os << pTraits<Type>::zero << endl;
-//    os << sampledField;
-//    //outputField.writeFooter(os);
-
-    AverageIOField<Type> outputField
-    (
-        IOobject
-        (
-            fieldName,
-            runTime.constant(),
-            "boundaryData"/patchName/timeName,
-            runTime,
-            IOobject::NO_READ,
-            IOobject::AUTO_WRITE,
-            false
-        ),
-        sampledField.size()
-    );
-    mkDir(outputField.path());
-    //outputField = sampledField;  // not sure why you can't assign a list to pointField which should be a derived list
-    forAll(outputField, faceI)
+    // First pass: read all data, get layer average
+    List<List<Type> > sampledField(patches.size());
+    Type invBottom(pTraits<Type>::zero); // average temperature at bottom of inversion layer
+    label layercount(0);
+    forAll(patches, patchI)
     {
-        //outputField[faceI] = sampledField[faceI];
-        outputField[faceI] = sampledField[pointOrder[faceI]];
-    }
-    outputField.write();
+        word patchName(patches[patchI]);
+        Info<< "Processing " << fieldName << " boundary " << patchName << endl;
 
-    Info<< "    wrote " << outputField.objectPath() << endl;
+        //- read source data
+        fileName sourcePath
+        (
+            prePath
+           /timeName
+           /patchName
+           /pTraits<Type>::typeName+"Field"
+           /fieldName
+        );
+        sampledField[patchI] = List<Type>();
+        IFstream(sourcePath)() >> sampledField[patchI];
+
+        //- modify the inversion layer if requested
+        if(modifyField)
+        {
+            forAll(inversionFaceIDs[patchI], I)
+            {
+                invBottom += sampledField[patchI][inversionFaceIDs[patchI][I]];
+            }
+            layercount += inversionFaceIDs[patchI].size();
+        }
+    }
+
+    if(modifyField)
+    {
+        invBottom /= layercount;
+        Info<< "    Modifying " << fieldName
+            << " with bottom of inversion = " << invBottom
+            << endl;
+    }
+
+    // Second pass: write the target data
+    forAll(patches, patchI)
+    {
+    //
+    // This writes all the data out correctly but the header incorrectly labels the
+    // object class as <Type>Field instead of <Type>AverageField; ultimately
+    // resulting in a runtime error.
+    //
+    //    IOField<Type> outputField
+    //    (
+    //        IOobject
+    //        (
+    //            fieldName,
+    //            runTime.constant(),
+    //            "boundaryData"/patchName/timeName,
+    //            runTime,
+    //            IOobject::NO_READ,
+    //            IOobject::AUTO_WRITE,
+    //            false
+    //        )
+    //    );
+    //    mkDir(outputField.path());
+    //    OFstream os
+    //    (
+    //        outputField.objectPath(),
+    //        runTime.writeFormat()
+    //    );
+    //    outputField.writeHeader(os);
+    //    os << "// Average" << endl;
+    //    os << pTraits<Type>::zero << endl;
+    //    os << sampledField;
+    //    //outputField.writeFooter(os);
+
+        AverageIOField<Type> outputField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.constant(),
+                "boundaryData"/patches[patchI]/timeName,
+                runTime,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE,
+                false
+            ),
+            sampledField[patchI].size()
+        );
+        mkDir(outputField.path());
+        //outputField = sampledField[patchI];  // not sure why you can't assign a list to pointField which should be a derived list
+        if(modifyField)
+        {
+            forAll(outputField, faceI)
+            {
+                label remapFaceI(order[patchI][faceI]);
+                // blending: 0..1, where 0 is in the BL, 1 is in the free atmosphere
+                outputField[faceI] = blending[patchI][remapFaceI]  *  (blendField[patchI][remapFaceI] + invBottom)
+                                + (1-blending[patchI][remapFaceI]) * sampledField[patchI][remapFaceI];
+            }
+        }
+        else
+        {
+            forAll(outputField, faceI)
+            {
+                outputField[faceI] = sampledField[patchI][order[patchI][faceI]];
+            }
+        }
+        outputField.write();
+
+        Info<< "    wrote " << outputField.objectPath() << endl;
+    }
 }
 
 
@@ -141,19 +189,24 @@ int main(int argc, char *argv[])
     (
         "movedPoints",
         "path",
-        "directory containing points (in foamFile format) displaced by moveDynamicMesh"
+        "directory containing points (in foamFile format) displaced by moveDynamicMesh; these will be the boundaryData points"
     );
     argList::addOption
     (
         "ref",
         "path",
-        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points"
+        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points; if specified, boundary points will be reordered"
     );
     argList::addOption
     (
         "patches",
         "fileNameList",
         "list of boundary patches for which to convert to proper boundaryData"
+    );
+    argList::addBoolOption
+    (
+        "enforceLapseRate",
+        "modify the potential temperature field above a specified height to enforce a specified lapse rate; depends on dictionary constant/lapseDict"
     );
 
     #include "setRootCase.H"
@@ -179,15 +232,47 @@ int main(int argc, char *argv[])
         "ref",
         refPath
     );
+    const bool enforceLapseRate = args.optionFound("enforceLapseRate");
+    scalar lapseRate(0.0);
+    scalar blendStart(0.0); // suppress compiler warning
+    scalar blendEnd(0.0);
+    scalar blendLayerHeight(0.0);
 
     #include "createTime.H"
 //    instantList timeDirs = timeSelector::select0(runTime, args);
 //    #include "createNamedMesh.H"
     instantList outputTimes = Time::findTimes(prePath);
-    Info<< outputTimes.size() << " times sampled: "
+    Info<< endl
+        << outputTimes.size() << " times sampled: "
         << outputTimes[0].value() << " .. "
         << outputTimes[outputTimes.size()-1].value()
         << endl;
+
+    // read additional parameters for enforcing the lapse rate
+    if(enforceLapseRate)
+    {
+        IOdictionary lapseDict
+        (
+            IOobject
+            (
+                "lapseDict",
+                runTime.time().constant(),
+                runTime,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            )
+        );
+        lapseRate = lapseDict.lookupOrDefault<scalar>("lapseDict",1.0);
+        lapseRate /= 1000.0;  // convert to K/m
+        blendStart = readScalar(lapseDict.lookup("blendStart"));
+        blendLayerHeight = lapseDict.lookupOrDefault<scalar>("blendLayerHeight",100.0);
+        blendEnd = blendStart + blendLayerHeight;
+        Info<< endl
+            << "A lapse rate of " << lapseRate << " K/m "
+            << " will be enforced blending from " << blendStart
+            << " to " << blendEnd
+            << endl << endl;
+    }
 
     //
     // Read sampled boundary patches from the first time
@@ -217,6 +302,12 @@ int main(int argc, char *argv[])
     // Write out boundary points at face centers, assuming they're invariant
     //
     List<List<label> > order(patches.size());
+    // for enforceLapseRate:
+    scalar zStart(-1);
+    List<DynamicList<label> > inversionFaceIDs(patches.size());
+    List<List<scalar> > blending(patches.size());
+    List<List<scalar> > Tlapse(patches.size());
+    List<List<vector> > dummyListVectorField(patches.size());
     forAll(patches, patchI)
     {
         word patchName = patches[patchI];
@@ -240,6 +331,7 @@ int main(int argc, char *argv[])
         scalar xMax(-VGREAT);
         scalar yMax(-VGREAT);
         scalar zMax(-VGREAT);
+        scalar nearest(VGREAT);
         forAll(faceCenters, faceI)
         {
             vector face = faceCenters[faceI];
@@ -267,12 +359,72 @@ int main(int argc, char *argv[])
             {
                 zMax = face.z();
             }
+            if(enforceLapseRate)
+            {
+                // find layer of cells to calculate an averaged value
+                // and start blending from
+                scalar dz = face.z() - blendStart;
+                if((dz > 0) && (dz < nearest))
+                {
+                    nearest = dz;
+                }
+            }
         }
-        Info << patchName << " face centers in"
+        Info<< patchName << " face centers in"
             << " (" << xMin << ", " << xMax << ")"
             << " (" << yMin << ", " << yMax << ")"
             << " (" << zMin << ", " << zMax << ")"
             << endl;
+
+        //-
+        if(enforceLapseRate)
+        {
+            nearest += blendStart;
+            if(zStart < 0)
+            {
+                zStart = nearest;
+                Info<< "averaging layer at z = " << zStart << endl;
+            }
+            else if(nearest != zStart)
+            {
+                Info<< "WARNING: mismatch in nearest z value: "
+                    << nearest << endl;
+            }
+
+            //- setup blending field and T field; save inversion face IDs
+            //  blending is from 0 to 1, where 1 is T determined entirely by the lapse rate
+            blending[patchI] = List<scalar>(faceCenters.size(), 0.0);
+            Tlapse[patchI] = List<scalar>(faceCenters.size(), 0.0);
+            forAll(faceCenters, faceI)
+            {
+                scalar faceZ = faceCenters[faceI].z();
+                // add faces at zStart, closest to blendStart
+                if(faceZ == zStart)
+                {
+                    inversionFaceIDs[patchI].append(faceI);
+                }
+                // specified lapse rate region
+                if(faceZ > blendEnd)
+                {
+                    //Tlapse[patchI][faceI] = faceZ - blendStart;
+                    Tlapse[patchI][faceI] = faceZ - zStart;
+                    blending[patchI][faceI] = 1.0;
+                }
+                // blended region
+                //else if(faceZ >= blendStart)
+                else if(faceZ >= zStart)
+                {
+                    //Tlapse[patchI][faceI] = faceZ - blendStart;
+                    Tlapse[patchI][faceI] = faceZ - zStart;
+                    //blending[patchI][faceI] = (faceZ - blendStart) / (blendEnd - blendStart);
+                    //blending[patchI][faceI] = Tlapse[patchI][faceI] / blendLayerHeight;
+                    blending[patchI][faceI] = Tlapse[patchI][faceI] / (blendEnd - zStart);
+                }
+                Tlapse[patchI][faceI] *= lapseRate;
+                // DEBUG:
+                //Info<< faceZ << " " << blending[patchI][faceI] << " " << Tlapse[patchI][faceI] << endl;
+            }
+        }
 
         //- find order from reference sampling patch
         //  These should be foamFile format, sampled from a reconstructed mesh
@@ -364,40 +516,41 @@ int main(int argc, char *argv[])
             word timeName(outputTimes[timeI].name());
             Info<< "\nt = " << outputTimes[timeI].value() << endl;
 
-            forAll(patches, patchI)
+            //- process scalar fields
+            forAll(scalarFields, fieldI)
             {
-                word patchName(patches[patchI]);
-                Info<< "Processing boundary " << patchName << endl;
+                writeBoundaryDataField<scalar>
+                (
+                    runTime,
+                    prePath,
+                    outDir,
+                    scalarFields[fieldI],
+                    timeName,
+                    patches,
+                    order,
+                    Tlapse,
+                    blending,
+                    inversionFaceIDs,
+                    (enforceLapseRate && scalarFields[fieldI]=="T")
+                );
+            }
 
-                //- process scalar fields
-                forAll(scalarFields, fieldI)
-                {
-                    writeBoundaryDataField<scalar>
-                    (
-                        runTime,
-                        prePath,
-                        outDir,
-                        scalarFields[fieldI],
-                        timeName,
-                        patchName,
-                        order[patchI]
-                    );
-                }
-
-                //- process vector fields
-                forAll(vectorFields, fieldI)
-                {
-                    writeBoundaryDataField<vector>
-                    (
-                        runTime,
-                        prePath,
-                        outDir,
-                        vectorFields[fieldI],
-                        timeName,
-                        patchName,
-                        order[patchI]
-                    );
-                }
+            //- process vector fields
+            forAll(vectorFields, fieldI)
+            {
+                writeBoundaryDataField<vector>
+                (
+                    runTime,
+                    prePath,
+                    outDir,
+                    vectorFields[fieldI],
+                    timeName,
+                    patches,
+                    order,
+                    dummyListVectorField, 
+                    blending,
+                    inversionFaceIDs
+                );
             }
         }
     }
