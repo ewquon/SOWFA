@@ -73,14 +73,122 @@ volScalarField T
     mesh
 );
 
+// Read dictionary used by boundaryDataConvert
+IOdictionary lapseDict
+(
+    IOobject
+    (
+        "lapseDict",
+        runTime.time().constant(),
+        runTime,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    )
+);
+scalar lapseRate = lapseDict.lookupOrDefault<scalar>("lapseDict",1.0);
+lapseRate /= 1000.0;  // convert to K/m
+scalar blendStart = readScalar(lapseDict.lookup("blendStart"));
+scalar blendLayerHeight = lapseDict.lookupOrDefault<scalar>("blendLayerHeight",100.0);
+scalar blendEnd = blendStart + blendLayerHeight;
+Info<< "\nA lapse rate of " << lapseRate << " K/m"
+    << " will be enforced blending from " << blendStart
+    << " to " << blendEnd
+    << endl << endl;
+
+
+// Find bottom of the inversion layer (assuming grid is structured Cartesian,
+// i.e., if we find the nearest level to the inversion, we'll have the entire
+// layer of cells)
+scalar nearest(VGREAT);
+forAll(T,cellI)
+{
+    scalar dz = mesh.C()[cellI].z() - blendStart;
+    if((dz > 0) && (dz < nearest))
+    {
+        nearest = dz;
+    }
+}
+scalar zStart = nearest + blendStart;
+
+// Find Tbottom as the layer mean
+scalar Tsum(0);
+label layercount(0);
+forAll(T,cellI)
+{
+    if(mesh.C()[cellI].z() == zStart)
+    {
+        Tsum += T[cellI];
+        layercount++;
+    }
+}
+dimensionedScalar Tbottom("Tbottom", dimTemperature, Tsum/layercount);
+Info<< "Calculated " << Tbottom
+    << " at z = " << zStart
+    << endl;
+
+volScalarField blending
+(
+    IOobject
+    (
+        "blending",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar
+    (
+        "blending",
+        dimensionSet(0, 0, 0, 0, 0, 0, 0),
+        0.0
+    )
+);
+
+volScalarField Tlapse
+(
+    IOobject
+    (
+        "Tlapse",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("Tlapse",dimTemperature,0.0)
+);
+
+forAll(T, cellI)
+{
+    scalar z = mesh.C()[cellI].z();
+    // specified lapse rate region
+    if(z > blendEnd)
+    {
+        //Tlapse[cellI] = z - blendStart;
+        Tlapse[cellI] = z - zStart;
+        blending[cellI] = 1.0;
+    }
+    // blended region
+    //else if(z >= blendStart)
+    else if(z >= zStart)
+    {
+        //Tlapse[cellI] = z - blendStart;
+        Tlapse[cellI] = z - zStart;
+        //blending[cellI] = (z - blendStart) / (blendEnd - blendStart);
+        //blending[cellI] = Tlapse[cellI] / blendLayerHeight;
+        blending[cellI] = Tlapse[cellI] / (blendEnd - zStart);
+    }
+    // DEBUG:
+    //Info<< z << " " << blending[cellI] << " " << Tlapse[cellI] << endl;
+}
+Tlapse = lapseRate*Tlapse + Tbottom;
+
 
 // Update the interior fields.
 
 Info << "Updating internal T field..." << endl;
-forAll(T,cellI)
-{
-    //T[cellI] = Tbottom;
-}
+T = blending*Tlapse + (1-blending)*T;
 
 
 // Update the boundary field.
@@ -91,8 +199,11 @@ forAll(T,cellI)
 // Write out the updated fields.
 Info<< "Writing field T" << endl;
 T.write(); 
+Tlapse.write();
+blending.write();
 
 
+Info<< "\nEnd." << endl;
 return 0;
 }
 
