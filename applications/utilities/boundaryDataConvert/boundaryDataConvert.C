@@ -406,17 +406,23 @@ int main(int argc, char *argv[])
                 // specified lapse rate region
                 if(faceZ > blendEnd)
                 {
-                    Tlapse[patchI][faceI] = faceZ - blendStart;
+                    //Tlapse[patchI][faceI] = faceZ - blendStart;
+                    Tlapse[patchI][faceI] = faceZ - zStart;
                     blending[patchI][faceI] = 1.0;
                 }
                 // blended region
-                else if(faceZ >= blendStart)
+                //else if(faceZ >= blendStart)
+                else if(faceZ >= zStart)
                 {
-                    Tlapse[patchI][faceI] = faceZ - blendStart;
+                    //Tlapse[patchI][faceI] = faceZ - blendStart;
+                    Tlapse[patchI][faceI] = faceZ - zStart;
                     //blending[patchI][faceI] = (faceZ - blendStart) / (blendEnd - blendStart);
-                    blending[patchI][faceI] = Tlapse[patchI][faceI] / blendLayerHeight;
+                    //blending[patchI][faceI] = Tlapse[patchI][faceI] / blendLayerHeight;
+                    blending[patchI][faceI] = Tlapse[patchI][faceI] / (blendEnd - zStart);
                 }
                 Tlapse[patchI][faceI] *= lapseRate;
+                // DEBUG:
+                //Info<< faceZ << " " << blending[patchI][faceI] << " " << Tlapse[patchI][faceI] << endl;
             }
         }
 
