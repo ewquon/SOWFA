@@ -141,13 +141,13 @@ int main(int argc, char *argv[])
     (
         "movedPoints",
         "path",
-        "directory containing points (in foamFile format) displaced by moveDynamicMesh"
+        "directory containing points (in foamFile format) displaced by moveDynamicMesh; these will be the boundaryData points"
     );
     argList::addOption
     (
         "ref",
         "path",
-        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points"
+        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points; if specified, boundary points will be reordered"
     );
     argList::addOption
     (
