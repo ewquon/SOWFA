@@ -47,9 +47,6 @@ using namespace Foam;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-static List<List<scalar> > _dummyListScalarList;
-static List<DynamicList<label> > _dummyListLabelList;
-
 template<class Type>
 void writeBoundaryDataField
 (
@@ -61,9 +58,10 @@ void writeBoundaryDataField
     const List<word>& patches,
     const List<List<label> >& order,
     // this is getting messy...
-    const scalar lapseRate = -1.0,
-    const List<List<scalar> >& blend = _dummyListScalarList,
-    const List<DynamicList<label> >& inversionIDs = _dummyListLabelList
+    const List<List<Type> >& blendField,
+    const List<List<scalar> >& blending,
+    const List<DynamicList<label> >& inversionFaceIDs,
+    const bool modifyField = false
 )
 {
     // First pass: read all data, get layer average
@@ -73,7 +71,7 @@ void writeBoundaryDataField
     forAll(patches, patchI)
     {
         word patchName(patches[patchI]);
-        Info<< "Processing boundary " << patchName << endl;
+        Info<< "Processing " << fieldName << " boundary " << patchName << endl;
 
         //- read source data
         fileName sourcePath
@@ -88,20 +86,22 @@ void writeBoundaryDataField
         IFstream(sourcePath)() >> sampledField[patchI];
 
         //- modify the inversion layer if requested
-        if(lapseRate >= 0)
+        if(modifyField)
         {
-            forAll(inversionIDs[patchI], I)
+            forAll(inversionFaceIDs[patchI], I)
             {
-                invBottom += sampledField[patchI][inversionIDs[patchI][I]];
+                invBottom += sampledField[patchI][inversionFaceIDs[patchI][I]];
             }
-            layercount += inversionIDs[patchI].size();
+            layercount += inversionFaceIDs[patchI].size();
         }
     }
 
-    if(lapseRate >= 0)
+    if(modifyField)
     {
         invBottom /= layercount;
-        Info<< "    invBottom = " << invBottom << endl;
+        Info<< "    Modifying " << fieldName
+            << " with bottom of inversion = " << invBottom
+            << endl;
     }
 
     // Second pass: write the target data
@@ -153,10 +153,22 @@ void writeBoundaryDataField
         );
         mkDir(outputField.path());
         //outputField = sampledField[patchI];  // not sure why you can't assign a list to pointField which should be a derived list
-        forAll(outputField, faceI)
+        if(modifyField)
         {
-            //outputField[faceI] = sampledField[patchI][faceI];
-            outputField[faceI] = sampledField[patchI][order[patchI][faceI]];
+            forAll(outputField, faceI)
+            {
+                label remapFaceI(order[patchI][faceI]);
+                // blending: 0..1, where 0 is in the BL, 1 is in the free atmosphere
+                outputField[faceI] = blending[patchI][remapFaceI]  *  (blendField[patchI][remapFaceI] + invBottom)
+                                + (1-blending[patchI][remapFaceI]) * sampledField[patchI][remapFaceI];
+            }
+        }
+        else
+        {
+            forAll(outputField, faceI)
+            {
+                outputField[faceI] = sampledField[patchI][order[patchI][faceI]];
+            }
         }
         outputField.write();
 
@@ -224,7 +236,7 @@ int main(int argc, char *argv[])
     scalar lapseRate(0.0);
     scalar blendStart(0.0); // suppress compiler warning
     scalar blendEnd(0.0);
-    scalar blendLayerHeight;
+    scalar blendLayerHeight(0.0);
 
     #include "createTime.H"
 //    instantList timeDirs = timeSelector::select0(runTime, args);
@@ -256,7 +268,7 @@ int main(int argc, char *argv[])
         blendLayerHeight = lapseDict.lookupOrDefault<scalar>("blendLayerHeight",100.0);
         blendEnd = blendStart + blendLayerHeight;
         Info<< endl
-            << "A lapse rate of " << lapseRate
+            << "A lapse rate of " << lapseRate << " K/m "
             << " will be enforced blending from " << blendStart
             << " to " << blendEnd
             << endl << endl;
@@ -292,8 +304,10 @@ int main(int argc, char *argv[])
     List<List<label> > order(patches.size());
     // for enforceLapseRate:
     scalar zStart(-1);
-    List<DynamicList<label> > inversionFaces(patches.size());
+    List<DynamicList<label> > inversionFaceIDs(patches.size());
     List<List<scalar> > blending(patches.size());
+    List<List<scalar> > Tlapse(patches.size());
+    List<List<vector> > dummyListVectorField(patches.size());
     forAll(patches, patchI)
     {
         word patchName = patches[patchI];
@@ -377,24 +391,32 @@ int main(int argc, char *argv[])
                     << nearest << endl;
             }
 
-            //- setup blending field and save inversion face IDs
+            //- setup blending field and T field; save inversion face IDs
             //  blending is from 0 to 1, where 1 is T determined entirely by the lapse rate
-            blending[patchI] = List<scalar>(faceCenters.size(), 1.0);
+            blending[patchI] = List<scalar>(faceCenters.size(), 0.0);
+            Tlapse[patchI] = List<scalar>(faceCenters.size(), 0.0);
             forAll(faceCenters, faceI)
             {
                 scalar faceZ = faceCenters[faceI].z();
+                // add faces at zStart, closest to blendStart
                 if(faceZ == zStart)
                 {
-                    inversionFaces[patchI].append(faceI);
+                    inversionFaceIDs[patchI].append(faceI);
                 }
-                if(faceZ <= blendStart)
+                // specified lapse rate region
+                if(faceZ > blendEnd)
                 {
-                    blending[patchI][faceI] = 0.0;
+                    Tlapse[patchI][faceI] = faceZ - blendStart;
+                    blending[patchI][faceI] = 1.0;
                 }
-                else if(faceZ < blendEnd)
+                // blended region
+                else if(faceZ >= blendStart)
                 {
-                    blending[patchI][faceI] = (faceZ - blendStart) / (blendEnd - blendStart);
+                    Tlapse[patchI][faceI] = faceZ - blendStart;
+                    //blending[patchI][faceI] = (faceZ - blendStart) / (blendEnd - blendStart);
+                    blending[patchI][faceI] = Tlapse[patchI][faceI] / blendLayerHeight;
                 }
+                Tlapse[patchI][faceI] *= lapseRate;
             }
         }
 
@@ -491,35 +513,20 @@ int main(int argc, char *argv[])
             //- process scalar fields
             forAll(scalarFields, fieldI)
             {
-                if(enforceLapseRate && scalarFields[fieldI]=="T")
-                {
-                    writeBoundaryDataField<scalar>
-                    (
-                        runTime,
-                        prePath,
-                        outDir,
-                        scalarFields[fieldI],
-                        timeName,
-                        patches,
-                        order,
-                        lapseRate,
-                        blending,
-                        inversionFaces
-                    );
-                }
-                else
-                {
-                    writeBoundaryDataField<scalar>
-                    (
-                        runTime,
-                        prePath,
-                        outDir,
-                        scalarFields[fieldI],
-                        timeName,
-                        patches,
-                        order
-                    );
-                }
+                writeBoundaryDataField<scalar>
+                (
+                    runTime,
+                    prePath,
+                    outDir,
+                    scalarFields[fieldI],
+                    timeName,
+                    patches,
+                    order,
+                    Tlapse,
+                    blending,
+                    inversionFaceIDs,
+                    (enforceLapseRate && scalarFields[fieldI]=="T")
+                );
             }
 
             //- process vector fields
@@ -533,7 +540,10 @@ int main(int argc, char *argv[])
                     vectorFields[fieldI],
                     timeName,
                     patches,
-                    order
+                    order,
+                    dummyListVectorField, 
+                    blending,
+                    inversionFaceIDs
                 );
             }
         }
