@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
     );
     const bool enforceLapseRate = args.optionFound("enforceLapseRate");
     scalar lapseRate;
-    scalar blendStart;
+    scalar blendStart(0); // suppress compiler warning
     scalar blendEnd;
     scalar blendLayerHeight;
 
@@ -254,6 +254,7 @@ int main(int argc, char *argv[])
     // Write out boundary points at face centers, assuming they're invariant
     //
     List<List<label> > order(patches.size());
+    scalar zStart(-1); // for enforceLapseRate
     forAll(patches, patchI)
     {
         word patchName = patches[patchI];
@@ -277,6 +278,7 @@ int main(int argc, char *argv[])
         scalar xMax(-VGREAT);
         scalar yMax(-VGREAT);
         scalar zMax(-VGREAT);
+        scalar nearest(VGREAT);
         forAll(faceCenters, faceI)
         {
             vector face = faceCenters[faceI];
@@ -304,12 +306,38 @@ int main(int argc, char *argv[])
             {
                 zMax = face.z();
             }
+            if(enforceLapseRate)
+            {
+                // find layer of cells to calculate an averaged value
+                // and start blending from
+                scalar dz = face.z() - blendStart;
+                if((dz > 0) && (dz < nearest))
+                {
+                    nearest = dz;
+                }
+            }
         }
-        Info << patchName << " face centers in"
+        Info<< patchName << " face centers in"
             << " (" << xMin << ", " << xMax << ")"
             << " (" << yMin << ", " << yMax << ")"
             << " (" << zMin << ", " << zMax << ")"
             << endl;
+
+        //-
+        if(enforceLapseRate)
+        {
+            nearest += blendStart;
+            if(zStart < 0)
+            {
+                zStart = nearest;
+                Info<< "averaging layer at z = " << zStart << endl;
+            }
+            else if(nearest != zStart)
+            {
+                Info<< "WARNING: mismatch in nearest z value: "
+                    << nearest << endl;
+            }
+        }
 
         //- find order from reference sampling patch
         //  These should be foamFile format, sampled from a reconstructed mesh
