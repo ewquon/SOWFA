@@ -95,6 +95,8 @@ Info<< "\nA lapse rate of " << lapseRate << " K/m"
     << " to " << blendEnd
     << endl << endl;
 
+// for selecting a layer of cells to determine Tbottom
+scalar avgtol = lapseDict.lookupOrDefault<scalar>("averagingTolerance",1.0);
 
 // Find bottom of the inversion layer (assuming grid is structured Cartesian,
 // i.e., if we find the nearest level to the inversion, we'll have the entire
@@ -115,7 +117,8 @@ scalar Tsum(0);
 label layercount(0);
 forAll(T,cellI)
 {
-    if(mesh.C()[cellI].z() == zStart)
+    scalar dz = mesh.C()[cellI].z() - zStart;
+    if((dz > 0) && (abs(dz) < avgtol))
     {
         Tsum += T[cellI];
         layercount++;
@@ -124,6 +127,7 @@ forAll(T,cellI)
 dimensionedScalar Tbottom("Tbottom", dimTemperature, Tsum/layercount);
 Info<< "Calculated " << Tbottom
     << " at z = " << zStart
+    << " averaged over " << layercount << " cells"
     << endl;
 
 volScalarField blending
