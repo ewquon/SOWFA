@@ -220,14 +220,14 @@ int main(int argc, char *argv[])
     List<word> vectorFields(1, "U");
 
     const bool pointsOnly = args.optionFound("pointsOnly");
-    fileName dispPath;
+    fileName newPointsPath;
     const bool replacePoints = args.optionReadIfPresent
     (
         "movedPoints",
-        dispPath
+        newPointsPath
     );
     fileName origPath;
-    const bool haveOrigPts = args.optionReadIfPresent
+    const bool haveOrigPoints = args.optionReadIfPresent
     (
         "originalPoints",
         origPath
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
         //- find order from reference sampling patch with original points
         //  These should be foamFile format, sampled from a reconstructed mesh
         order[patchI] = List<label>(faceCenters.size());
-        if (haveOrigPts)
+        if (haveOrigPoints)
         {
             fileName origPointsFile
             (
@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
         {
             fileName pointsFile
             (
-                dispPath / patchName / "faceCentres"
+                newPointsPath / patchName / "faceCentres"
             );
             IFstream(pointsFile)() >> faceCenters;
             Info<< "Read moved points from " << pointsFile << endl;
