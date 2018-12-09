@@ -28,6 +28,13 @@ Description
     Convert boundaryDataPre data (sampled from boundaries) to binary
     boundaryData files for the timeVaryingMapped* class of BCs.
 
+    * For consistent mapping without mesh motion, no special options necessary.
+    * For consistent mapping with mesh motion, specify -movedPoints to output
+      the correct points to boundaryData/<patch>/points
+    * Otherwise, specify -originalPoints and -movedPoints so that points may be
+      mapped from the precursor boundary to the original points, while the new
+      boundaryData/<patch>/points will match the moved points.
+
 Notes
     boundaryData/<patchName>/points are face centers
 
@@ -199,6 +206,12 @@ int main(int argc, char *argv[])
     );
     argList::addOption
     (
+        "zOffset",
+        "Z",
+        "distance that the 'original' and 'moved' points have been displacement in z"
+    );
+    argList::addOption
+    (
         "pointDisplacement",
         "path",
         "directory containing point-displacement field (from moveDynamicMesh) to map between old and new points; if specified, boundary points will be reordered"
@@ -310,6 +323,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    const scalar zOffset = args.optionLookupOrDefault<scalar>("zOffset", 0);
+    vector uniformOffset(0,0,zOffset);
+    Info<< "uniform offset in original points: " << zOffset << endl;
+
     //
     // Write out boundary points at face centers, assuming they're invariant
     //
@@ -335,6 +352,7 @@ int main(int argc, char *argv[])
         );
         List<vector> faceCenters;
         IFstream(faceCentersPath)() >> faceCenters;
+        Info<< "Read face centers from " << faceCentersPath << endl;
 
         //- check ranges
         scalar xMin(VGREAT);
@@ -382,7 +400,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        Info<< patchName << " face centers in"
+        Info<< "  " << patchName << " face centers in"
             << " (" << xMin << ", " << xMax << ")"
             << " (" << yMin << ", " << yMax << ")"
             << " (" << zMin << ", " << zMax << ")"
@@ -395,7 +413,8 @@ int main(int argc, char *argv[])
             if(zStart < 0)
             {
                 zStart = nearest;
-                Info<< "averaging layer at z = " << zStart << endl;
+                Info<< "Enforcing lapse rate of " << lapseRate << endl;
+                Info<< "  Tbottom averaged from layer at z = " << zStart << endl;
             }
             else if(nearest != zStart)
             {
@@ -439,7 +458,8 @@ int main(int argc, char *argv[])
         }
 
         //- find order from reference sampling patch with original points
-        //  These should be foamFile format, sampled from a reconstructed mesh
+        //  Note: These should be foamFile format, sampled from a reconstructed mesh
+        //  Note: At this point, faceCenters have coordinates from the precursor boundaryDataPre files
         order[patchI] = List<label>(faceCenters.size());
         if (haveOrigPoints)
         {
@@ -447,22 +467,33 @@ int main(int argc, char *argv[])
             (
                 origPath / patchName / "faceCentres"
             );
+            Info<< "Mapping " << origPointsFile << " to precursor" << endl;
+
             List<vector> origPoints;
             IFstream(origPointsFile)() >> origPoints;
             forAll(origPoints, ptI)
             {
                 label index(-1);
+                scalar minDist(VGREAT);
                 for( int i=0; i < faceCenters.size(); i++ )
                 {
-                    if(Foam::mag(origPoints[ptI] - faceCenters[i]) < 1e-5)
+                    scalar d = Foam::mag(origPoints[ptI] - faceCenters[i] - uniformOffset);
+                    if(d < 1e-5)
                     {
                         index = i;
                         break;
                     }
+                    else
+                    {
+                        if(d < minDist) minDist = d;
+                    }
                 }
                 if (index < 0)
                 {
-                    Info<< "Warning: original point not matched with actual face center"
+                    Info<< "Warning: point "
+                        << origPoints[ptI] - uniformOffset
+                        << " not matched with actual face center"
+                        << " (minDist = " << minDist << ")"
                         << endl;
                 }
                 order[patchI][ptI] = index;
