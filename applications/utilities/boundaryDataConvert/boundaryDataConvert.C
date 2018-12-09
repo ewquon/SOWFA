@@ -199,6 +199,12 @@ int main(int argc, char *argv[])
     );
     argList::addOption
     (
+        "pointDisplacement",
+        "path",
+        "directory containing point-displacement field (from moveDynamicMesh) to map between old and new points; if specified, boundary points will be reordered"
+    );
+    argList::addOption
+    (
         "patches",
         "fileNameList",
         "list of boundary patches for which to convert to proper boundaryData"
@@ -231,6 +237,12 @@ int main(int argc, char *argv[])
     (
         "originalPoints",
         origPath
+    );
+    fileName dispPath;
+    const bool havePointDisplacement = args.optionReadIfPresent
+    (
+        "pointDisplacement",
+        dispPath
     );
     const bool enforceLapseRate = args.optionFound("enforceLapseRate");
     scalar lapseRate(0.0);
@@ -478,6 +490,11 @@ int main(int argc, char *argv[])
             );
             IFstream(pointsFile)() >> faceCenters;
             Info<< "Read moved points from " << pointsFile << endl;
+        }
+
+        if (havePointDisplacement)
+        {
+            Info<< "Handling pointDisplacement field NOT implemented." << endl;
         }
 
         //- now write out an openfoam IO object
