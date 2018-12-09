@@ -193,9 +193,9 @@ int main(int argc, char *argv[])
     );
     argList::addOption
     (
-        "ref",
+        "originalPoints",
         "path",
-        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points; if specified, boundary points will be reordered"
+        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points; if specified, boundary points will be reordered assuming the point ordering is consistent"
     );
     argList::addOption
     (
@@ -226,11 +226,11 @@ int main(int argc, char *argv[])
         "movedPoints",
         dispPath
     );
-    fileName refPath;
-    const bool haveRef = args.optionReadIfPresent
+    fileName origPath;
+    const bool haveOrigPts = args.optionReadIfPresent
     (
-        "ref",
-        refPath
+        "originalPoints",
+        origPath
     );
     const bool enforceLapseRate = args.optionFound("enforceLapseRate");
     scalar lapseRate(0.0);
@@ -426,23 +426,23 @@ int main(int argc, char *argv[])
             }
         }
 
-        //- find order from reference sampling patch
+        //- find order from reference sampling patch with original points
         //  These should be foamFile format, sampled from a reconstructed mesh
         order[patchI] = List<label>(faceCenters.size());
-        if (haveRef)
+        if (haveOrigPts)
         {
-            fileName refPointsFile
+            fileName origPointsFile
             (
-                refPath / patchName / "faceCentres"
+                origPath / patchName / "faceCentres"
             );
-            List<vector> refPoints;
-            IFstream(refPointsFile)() >> refPoints;
-            forAll(refPoints, refI)
+            List<vector> origPoints;
+            IFstream(origPointsFile)() >> origPoints;
+            forAll(origPoints, ptI)
             {
                 label index(-1);
                 for( int i=0; i < faceCenters.size(); i++ )
                 {
-                    if(Foam::mag(refPoints[refI] - faceCenters[i]) < 1e-5)
+                    if(Foam::mag(origPoints[ptI] - faceCenters[i]) < 1e-5)
                     {
                         index = i;
                         break;
@@ -450,12 +450,12 @@ int main(int argc, char *argv[])
                 }
                 if (index < 0)
                 {
-                    Info<< "Warning: ref point not matched with actual face center"
+                    Info<< "Warning: original point not matched with actual face center"
                         << endl;
                 }
-                order[patchI][refI] = index;
+                order[patchI][ptI] = index;
             }
-            Info<< "Note: Reordering assuming the moved mesh and the reference"
+            Info<< "Note: Reordering assuming the moved mesh and the original"
                 << " mesh have the same standard OpenFOAM ordering." << endl;
         }
         else
