@@ -28,6 +28,13 @@ Description
     Convert boundaryDataPre data (sampled from boundaries) to binary
     boundaryData files for the timeVaryingMapped* class of BCs.
 
+    * For consistent mapping without mesh motion, no special options necessary.
+    * For consistent mapping with mesh motion, specify -movedPoints to output
+      the correct points to boundaryData/<patch>/points
+    * Otherwise, specify -originalPoints and -movedPoints so that points may be
+      mapped from the precursor boundary to the original points, while the new
+      boundaryData/<patch>/points will match the moved points.
+
 Notes
     boundaryData/<patchName>/points are face centers
 
@@ -193,9 +200,21 @@ int main(int argc, char *argv[])
     );
     argList::addOption
     (
-        "ref",
+        "originalPoints",
         "path",
-        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points; if specified, boundary points will be reordered"
+        "directory containing points (in foamFile format) to use as a reference for mapping between old and new points; if specified, boundary points will be reordered assuming the point ordering is consistent"
+    );
+    argList::addOption
+    (
+        "zOffset",
+        "Z",
+        "distance that the 'original' and 'moved' points have been displacement in z"
+    );
+    argList::addOption
+    (
+        "pointDisplacement",
+        "path",
+        "directory containing point-displacement field (from moveDynamicMesh) to map between old and new points; if specified, boundary points will be reordered"
     );
     argList::addOption
     (
@@ -220,17 +239,23 @@ int main(int argc, char *argv[])
     List<word> vectorFields(1, "U");
 
     const bool pointsOnly = args.optionFound("pointsOnly");
-    fileName dispPath;
+    fileName newPointsPath;
     const bool replacePoints = args.optionReadIfPresent
     (
         "movedPoints",
-        dispPath
+        newPointsPath
     );
-    fileName refPath;
-    const bool haveRef = args.optionReadIfPresent
+    fileName origPath;
+    const bool haveOrigPoints = args.optionReadIfPresent
     (
-        "ref",
-        refPath
+        "originalPoints",
+        origPath
+    );
+    fileName dispPath;
+    const bool havePointDisplacement = args.optionReadIfPresent
+    (
+        "pointDisplacement",
+        dispPath
     );
     const bool enforceLapseRate = args.optionFound("enforceLapseRate");
     scalar lapseRate(0.0);
@@ -298,6 +323,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    const scalar zOffset = args.optionLookupOrDefault<scalar>("zOffset", 0);
+    vector uniformOffset(0,0,zOffset);
+    Info<< "uniform offset in original points: " << zOffset << endl;
+
     //
     // Write out boundary points at face centers, assuming they're invariant
     //
@@ -323,6 +352,7 @@ int main(int argc, char *argv[])
         );
         List<vector> faceCenters;
         IFstream(faceCentersPath)() >> faceCenters;
+        Info<< "Read face centers from " << faceCentersPath << endl;
 
         //- check ranges
         scalar xMin(VGREAT);
@@ -370,7 +400,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        Info<< patchName << " face centers in"
+        Info<< "  " << patchName << " face centers in"
             << " (" << xMin << ", " << xMax << ")"
             << " (" << yMin << ", " << yMax << ")"
             << " (" << zMin << ", " << zMax << ")"
@@ -383,7 +413,8 @@ int main(int argc, char *argv[])
             if(zStart < 0)
             {
                 zStart = nearest;
-                Info<< "averaging layer at z = " << zStart << endl;
+                Info<< "Enforcing lapse rate of " << lapseRate << endl;
+                Info<< "  Tbottom averaged from layer at z = " << zStart << endl;
             }
             else if(nearest != zStart)
             {
@@ -426,36 +457,48 @@ int main(int argc, char *argv[])
             }
         }
 
-        //- find order from reference sampling patch
-        //  These should be foamFile format, sampled from a reconstructed mesh
+        //- find order from reference sampling patch with original points
+        //  Note: These should be foamFile format, sampled from a reconstructed mesh
+        //  Note: At this point, faceCenters have coordinates from the precursor boundaryDataPre files
         order[patchI] = List<label>(faceCenters.size());
-        if (haveRef)
+        if (haveOrigPoints)
         {
-            fileName refPointsFile
+            fileName origPointsFile
             (
-                refPath / patchName / "faceCentres"
+                origPath / patchName / "faceCentres"
             );
-            List<vector> refPoints;
-            IFstream(refPointsFile)() >> refPoints;
-            forAll(refPoints, refI)
+            Info<< "Mapping " << origPointsFile << " to precursor" << endl;
+
+            List<vector> origPoints;
+            IFstream(origPointsFile)() >> origPoints;
+            forAll(origPoints, ptI)
             {
                 label index(-1);
+                scalar minDist(VGREAT);
                 for( int i=0; i < faceCenters.size(); i++ )
                 {
-                    if(Foam::mag(refPoints[refI] - faceCenters[i]) < 1e-5)
+                    scalar d = Foam::mag(origPoints[ptI] - faceCenters[i] - uniformOffset);
+                    if(d < 1e-5)
                     {
                         index = i;
                         break;
                     }
+                    else
+                    {
+                        if(d < minDist) minDist = d;
+                    }
                 }
                 if (index < 0)
                 {
-                    Info<< "Warning: ref point not matched with actual face center"
+                    Info<< "Warning: point "
+                        << origPoints[ptI] - uniformOffset
+                        << " not matched with actual face center"
+                        << " (minDist = " << minDist << ")"
                         << endl;
                 }
-                order[patchI][refI] = index;
+                order[patchI][ptI] = index;
             }
-            Info<< "Note: Reordering assuming the moved mesh and the reference"
+            Info<< "Note: Reordering assuming the moved mesh and the original"
                 << " mesh have the same standard OpenFOAM ordering." << endl;
         }
         else
@@ -474,10 +517,15 @@ int main(int argc, char *argv[])
         {
             fileName pointsFile
             (
-                dispPath / patchName / "faceCentres"
+                newPointsPath / patchName / "faceCentres"
             );
             IFstream(pointsFile)() >> faceCenters;
             Info<< "Read moved points from " << pointsFile << endl;
+        }
+
+        if (havePointDisplacement)
+        {
+            Info<< "Handling pointDisplacement field NOT implemented." << endl;
         }
 
         //- now write out an openfoam IO object
