@@ -1,0 +1,180 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.6                                   |
+|   \\  /    A nd           | Web:      http://www.OpenFOAM.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      turbineProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+globalProperties
+{
+    outputControl       "timeStep";
+    outputInterval       1;
+
+    dryRun                            false;
+    restart                           false;
+
+    superControllerOn                 false;
+    superControllerLib               "UNUSED_IF_FALSE.so";
+    numSuperControllerInputs          4;
+    numSuperControllerOutputs         2;
+
+    timeSimulationStart            20000.0;
+    timeSimulationEnd              21800.0;
+
+    checkPointInterval 10000; 
+}
+
+turbine0
+{
+    turbineType         "NREL5MWRef";
+    FASTInputFileName   "NREL5MWRef.0.fst";
+    FASTRestartFileName "NREL5MWRef.0.chkpt";
+//  nFASTSubSteps	4;
+    nFASTSubSteps	16; // for testing with dt=0.1 s
+    includeNacelle                    false;
+    includeTower                      true;
+    baseLocation                     (250.0 500.0 0.0);
+    numBladePoints                    40;
+    numNacellePoints                  10;
+    numTowerPoints                    12;
+    bladePointDistType               "uniform";
+    nacellePointDistType             "uniform";
+    towerPointDistType               "uniform";
+    bladeSearchCellMethod            "disk";
+    bladeActuatorPointInterpType     "linear";
+//  bladeActuatorPointInterpType     "cellCenter";
+    nacelleActuatorPointInterpType   "linear";
+    towerActuatorPointInterpType     "linear";
+    actuatorUpdateType               "oldPosition";
+//  actuatorUpdateType               "newPosition";
+    bladeForceProjectionType         "uniformGaussian";
+    nacelleForceProjectionType       "diskGaussian";
+    towerForceProjectionType         "diskGaussian";
+  //bladeForceProjectionDirection    "localVelocityAligned";
+    bladeForceProjectionDirection    "sampledVelocityAligned";
+    bladeEpsilon                     (5.0 0.0 0.0);
+    nacelleEpsilon                   (4.0 4.0 0.0);
+    towerEpsilon                     (4.0 4.0 0.0);
+    nacelleSampleDistance             1.0;
+    towerSampleDistance               0.5;
+    nacelleLength                     3.0;
+    nacelleFrontalArea                10.24;
+    nacelleCd                         0.5;
+    velocityDragCorrType             "none";
+    tipRootLossCorrType              "none";
+//  tipRootLossCorrType              "Glauert";
+    rotationDir "cw";
+    Azimuth                           0.0;
+    RotSpeed                          10.0;
+    TorqueGen			      20000.0;
+    Pitch                             0.0;
+    NacYaw                          270.0;
+    fluidDensity 1.23;
+}
+
+turbine1
+{
+    turbineType         "NREL5MWRef";
+    FASTInputFileName   "NREL5MWRef.1.fst";
+    FASTRestartFileName "NREL5MWRef.1.chkpt";
+//  nFASTSubSteps	4;
+    nFASTSubSteps	16; // for testing with dt=0.1 s
+    includeNacelle                    false;
+    includeTower                      true;
+    baseLocation                     (500.0 500.0 0.0);
+    numBladePoints                    40;
+    numNacellePoints                  10;
+    numTowerPoints                    12;
+    bladePointDistType               "uniform";
+    nacellePointDistType             "uniform";
+    towerPointDistType               "uniform";
+    bladeSearchCellMethod            "disk";
+    bladeActuatorPointInterpType     "linear";
+//  bladeActuatorPointInterpType     "cellCenter";
+    nacelleActuatorPointInterpType   "linear";
+    towerActuatorPointInterpType     "linear";
+    actuatorUpdateType               "oldPosition";
+//  actuatorUpdateType               "newPosition";
+    bladeForceProjectionType         "uniformGaussian";
+    nacelleForceProjectionType       "diskGaussian";
+    towerForceProjectionType         "diskGaussian";
+  //bladeForceProjectionDirection    "localVelocityAligned";
+    bladeForceProjectionDirection    "sampledVelocityAligned";
+    bladeEpsilon                     (5.0 0.0 0.0);
+    nacelleEpsilon                   (4.0 4.0 0.0);
+    towerEpsilon                     (4.0 4.0 0.0);
+    nacelleSampleDistance             1.0;
+    towerSampleDistance               0.5;
+    nacelleLength                     3.0;
+    nacelleFrontalArea                10.24;
+    nacelleCd                         0.5;
+    velocityDragCorrType             "none";
+    tipRootLossCorrType              "none";
+//  tipRootLossCorrType              "Glauert";
+    rotationDir "cw";
+    Azimuth                           0.0;
+    RotSpeed                          10.0;
+    TorqueGen                         20000.0;
+    Pitch                             0.0;
+    NacYaw                          270.0;
+    fluidDensity 1.23;
+}
+
+
+turbine2
+{
+    turbineType         "NREL5MWRef";
+    FASTInputFileName   "NREL5MWRef.2.fst";
+    FASTRestartFileName "NREL5MWRef.2.chkpt";
+//  nFASTSubSteps	4;
+    nFASTSubSteps	16; // for testing with dt=0.1 s
+    includeNacelle                    false;
+    includeTower                      true;
+    baseLocation                     (750.0 500.0 0.0);
+    numBladePoints                    40;
+    numNacellePoints                  10;
+    numTowerPoints                    12;
+    bladePointDistType               "uniform";
+    nacellePointDistType             "uniform";
+    towerPointDistType               "uniform";
+    bladeSearchCellMethod            "disk";
+    bladeActuatorPointInterpType     "linear";
+//  bladeActuatorPointInterpType     "cellCenter";
+    nacelleActuatorPointInterpType   "linear";
+    towerActuatorPointInterpType     "linear";
+    actuatorUpdateType               "oldPosition";
+//  actuatorUpdateType               "newPosition";
+    bladeForceProjectionType         "uniformGaussian";
+    nacelleForceProjectionType       "diskGaussian";
+    towerForceProjectionType         "diskGaussian";
+  //bladeForceProjectionDirection    "localVelocityAligned";
+    bladeForceProjectionDirection    "sampledVelocityAligned";
+    bladeEpsilon                     (5.0 0.0 0.0);
+    nacelleEpsilon                   (4.0 4.0 0.0);
+    towerEpsilon                     (4.0 4.0 0.0);
+    nacelleSampleDistance             1.0;
+    towerSampleDistance               0.5;
+    nacelleLength                     3.0;
+    nacelleFrontalArea                10.24;
+    nacelleCd                         0.5;
+    velocityDragCorrType             "none";
+    tipRootLossCorrType              "none";
+//  tipRootLossCorrType              "Glauert";
+    rotationDir "cw";
+    Azimuth                           0.0;
+    RotSpeed                          10.0;
+    TorqueGen                         20000.0;
+    Pitch                             0.0;
+    NacYaw                          270.0;
+    fluidDensity 1.23;  
+}
+

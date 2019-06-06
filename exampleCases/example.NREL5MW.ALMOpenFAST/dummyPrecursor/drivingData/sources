@@ -1,0 +1,30 @@
+sourceHeightsMomentum
+(
+    0.0
+);
+sourceTableMomentumX
+(
+    (0.0           1e-04)
+    (99999.9999999 1e-04)
+);
+sourceTableMomentumY
+(
+    (0.0           0.0)
+    (99999.9999999 0.0)
+);
+sourceTableMomentumZ
+(
+    (0.0           0.0)
+    (99999.9999999 0.0)
+);
+
+sourceHeightsTemperature
+(
+    0.0
+);
+
+sourceTableTemperature
+(
+    (0.0           0.0)
+    (99999.9999999 0.0)
+);
