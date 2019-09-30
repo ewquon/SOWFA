@@ -402,6 +402,14 @@ void horizontalAxisWindTurbinesALMOpenFAST::readInput()
         {
             numNacellePoints[i] = 1;
         }
+
+        // Read in additional variables for tip-loss correction
+        // Note: These really should come from FAST, but this is the quick-
+        //   and-dirty implementation
+        NumBl.append(scalar(readScalar(turbineArrayProperties.subDict(turbineName[i]).lookup("NumBl"))));
+        TipRad.append(scalar(readScalar(turbineArrayProperties.subDict(turbineName[i]).lookup("TipRad"))));
+        HubRad.append(scalar(readScalar(turbineArrayProperties.subDict(turbineName[i]).lookup("HubRad"))));
+
     }
 }
 
@@ -1717,6 +1725,45 @@ void horizontalAxisWindTurbinesALMOpenFAST::getForces()
        {
            forAll(bladePointForce[i][j],k)
            {
+                // Get the angle of the wind with respect to rotor plane
+                // tangent direction.
+                scalar windAng = Foam::atan2(
+                    bladeWindVectors[i][j][k].x(),
+                    bladeWindVectors[i][j][k].y()
+                ) / degRad; 
+
+               // Apply tip/root-loss correction factor.
+               // Tip/root-loss correction factor of Glauert.
+               // - original correction scales Cl and Cd, then rotates the
+               //   force vector to align with x/y axes
+               // - here, the force vector is already aligned with x/y, and
+               //   we apply the scaling after the fact
+               // - since it's a scalar transformation, the order operation
+               //   doesn't matter
+               scalar F = 1.0;
+               if(tipRootLossCorrType[i] == "none")
+               {
+                   F = 1.0;
+               }
+               else if(tipRootLossCorrType[i] == "Glauert")
+               {
+                   scalar g = 1.0;
+
+                   // note: the turbine properties are read in from the turbine
+                   //   subdict in turbineArrayProperties
+                   scalar ftip  = (TipRad[i] - bladePointRadius[i][j][k]) 
+                       / (bladePointRadius[i][j][k] * sin(mag(windAng)*degRad));
+                   scalar Ftip  = (2.0/(Foam::constant::mathematical::pi))
+                       * acos(min(1.0, exp(-g * (NumBl[i] / 2.0) * ftip)));
+
+                   scalar froot = (bladePointRadius[i][j][k] - HubRad[i])
+                       / (bladePointRadius[i][j][k] * sin(mag(windAng)*degRad));
+                   scalar Froot = (2.0/(Foam::constant::mathematical::pi))
+                       * acos(min(1.0, exp(-g * (NumBl[i] / 2.0) * froot)));
+
+                   F = Ftip * Froot;
+               }
+
                bladePointForce[i][j][k] = forces_[startIndex + m];
              //vector a = vector::zero;
              //a.x() = 1.0;

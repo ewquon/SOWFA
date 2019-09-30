@@ -593,6 +593,18 @@ private:
             DynamicList<scalar> generatorPower;
              
 
+        //- Turbine Level Data (all variables start with a capital letter).
+
+            //*** THE FOLLOWING VARIABLES MATCH FAST INPUT FILE ***
+            //- Number of blades;
+            DynamicList<int> NumBl;
+
+            //- Distance from rotor apex to blade tip (m).
+            DynamicList<scalar> TipRad;
+
+            //- Distance from rotor apex to blade root (m).
+            DynamicList<scalar> HubRad;
+
 
 
         //- Output Data File Information.
